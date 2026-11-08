@@ -1,0 +1,238 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "file": "amb-room-tone-night__01.wav",
+      "role": "amb-room-tone-night",
+      "category": "ambience",
+      "source": "room-tone-45s.wav",
+      "duration": 44.81,
+      "trim": [
+        0.19,
+        45.0
+      ],
+      "gain_db": -4.67,
+      "peak_db": -9.0,
+      "rms_db": -26.89,
+      "mode": "loop",
+      "channels": 2,
+      "note": "trimmed to a 45 s loop from the 2 min source",
+      "derived": true
+    },
+    {
+      "file": "foley-door-creak__01.wav",
+      "role": "foley-door-creak",
+      "category": "foley",
+      "source": "freesound_community-door-creak-38423.mp3",
+      "duration": 2.61,
+      "trim": [
+        0.1,
+        2.71
+      ],
+      "gain_db": 15.19,
+      "peak_db": -6.0,
+      "rms_db": -21.87,
+      "mode": "one-shot",
+      "channels": 1
+    },
+    {
+      "file": "foley-door-lock__01.wav",
+      "role": "foley-door-lock",
+      "category": "foley",
+      "source": "110538__soundbytercom__wwwsoundbytercom_lockingdoor1.wav",
+      "duration": 0.86,
+      "trim": [
+        0.01,
+        0.87
+      ],
+      "gain_db": -7.04,
+      "peak_db": -6.0,
+      "rms_db": -28.66,
+      "mode": "one-shot",
+      "channels": 2
+    },
+    {
+      "file": "foley-footstep-single__01.wav",
+      "role": "foley-footstep-single",
+      "category": "foley",
+      "source": "step-single.wav",
+      "duration": 0.3,
+      "trim": [
+        0.0,
+        0.3
+      ],
+      "gain_db": 0.38,
+      "peak_db": -6.0,
+      "rms_db": -23.46,
+      "mode": "one-shot",
+      "channels": 2,
+      "note": "derived: one step lifted from foley-footsteps-hall__01",
+      "derived": true
+    },
+    {
+      "file": "foley-footsteps-hall__01.wav",
+      "role": "foley-footsteps-hall",
+      "category": "foley",
+      "source": "dragon-studio-footsteps-on-wood-397989.mp3",
+      "duration": 4.03,
+      "trim": [
+        0.06,
+        4.09
+      ],
+      "gain_db": -5.57,
+      "peak_db": -6.0,
+      "rms_db": -26.59,
+      "mode": "one-shot",
+      "channels": 1
+    },
+    {
+      "file": "foley-light-switch__01.wav",
+      "role": "foley-light-switch",
+      "category": "foley",
+      "source": "dragon-studio-light-switch-382712.mp3",
+      "duration": 0.27,
+      "trim": [
+        0.04,
+        0.31
+      ],
+      "gain_db": -6.18,
+      "peak_db": -6.0,
+      "rms_db": -34.5,
+      "mode": "one-shot",
+      "channels": 2
+    },
+    {
+      "file": "stinger-heartbeat__01.wav",
+      "role": "stinger-heartbeat",
+      "category": "stinger",
+      "source": "dragon-studio-heartbeat-sound-372448.mp3",
+      "duration": 21.394,
+      "trim": [
+        0.0,
+        21.394
+      ],
+      "gain_db": 0.71,
+      "peak_db": -3.0,
+      "rms_db": -21.68,
+      "mode": "one-shot",
+      "channels": 2
+    },
+    {
+      "file": "stinger-hit__01.wav",
+      "role": "stinger-hit",
+      "category": "stinger",
+      "source": "stinger-hit.mp3",
+      "duration": 4.19,
+      "trim": [
+        0.17,
+        4.36
+      ],
+      "gain_db": -5.74,
+      "peak_db": -3.0,
+      "rms_db": -15.74,
+      "mode": "one-shot",
+      "channels": 2
+    },
+    {
+      "file": "stinger-riser__01.wav",
+      "role": "stinger-riser",
+      "category": "stinger",
+      "source": "riser_649826.wav",
+      "duration": 2.11,
+      "trim": [
+        0.19,
+        2.3
+      ],
+      "gain_db": -2.97,
+      "peak_db": -3.0,
+      "rms_db": -20.33,
+      "mode": "one-shot",
+      "channels": 2
+    },
+    {
+      "file": "stinger-sub-drop__01.wav",
+      "role": "stinger-sub-drop",
+      "category": "stinger",
+      "source": "sub-drop.wav",
+      "duration": 2.59,
+      "trim": [
+        0.0,
+        2.59
+      ],
+      "gain_db": -1.99,
+      "peak_db": -3.0,
+      "rms_db": -13.09,
+      "mode": "one-shot",
+      "channels": 1,
+      "note": "designed: falling 92->27 Hz sub with the attack of stinger-hit",
+      "derived": true
+    },
+    {
+      "file": "texture-static__01.wav",
+      "role": "texture-static",
+      "category": "texture",
+      "source": "yourugor-tv-static-noise-291374.mp3",
+      "duration": 5.59,
+      "trim": [
+        0.0,
+        5.59
+      ],
+      "gain_db": 5.52,
+      "peak_db": -9.0,
+      "rms_db": -20.22,
+      "mode": "loop",
+      "channels": 2
+    },
+    {
+      "file": "transition-dip__01.wav",
+      "role": "transition-dip",
+      "category": "transition",
+      "source": "dragon-studio-whoosh-cinematic-5-376880 (2).mp3",
+      "duration": 1.81,
+      "trim": [
+        0.07,
+        1.88
+      ],
+      "gain_db": -1.91,
+      "peak_db": -3.0,
+      "rms_db": -24.24,
+      "mode": "one-shot",
+      "channels": 2
+    },
+    {
+      "file": "transition-static-burst__01.wav",
+      "role": "transition-static-burst",
+      "category": "transition",
+      "source": "static-burst.wav",
+      "duration": 0.85,
+      "trim": [
+        0.0,
+        0.85
+      ],
+      "gain_db": 3.66,
+      "peak_db": -3.0,
+      "rms_db": -17.07,
+      "mode": "one-shot",
+      "channels": 2,
+      "note": "derived: 0.85 s cut of texture-static__01 with a hard decay",
+      "derived": true
+    },
+    {
+      "file": "transition-whoosh__01.wav",
+      "role": "transition-whoosh",
+      "category": "transition",
+      "source": "dragon-studio-simple-whoosh-382724.mp3",
+      "duration": 0.4,
+      "trim": [
+        0.04,
+        0.44
+      ],
+      "gain_db": -0.95,
+      "peak_db": -3.0,
+      "rms_db": -18.59,
+      "mode": "one-shot",
+      "channels": 2
+    }
+  ],
+  "updated": "2026-11-08T21:19:12"
+}

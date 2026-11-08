@@ -1,0 +1,70 @@
+# Sound-effect provenance
+# Fill in source + licence for each row before publishing. Keep receipts.
+# Files marked DERIVED were built from another file in this library.
+
+amb-room-tone-night__01.wav  (amb-room-tone-night, 44.81s)
+  DERIVED : room-tone-45s.wav
+  note    : trimmed to a 45 s loop from the 2 min source
+
+foley-door-creak__01.wav  (foley-door-creak, 2.61s)
+  source file : freesound_community-door-creak-38423.mp3
+  source  : 
+  licence : 
+
+foley-door-lock__01.wav  (foley-door-lock, 0.86s)
+  source file : 110538__soundbytercom__wwwsoundbytercom_lockingdoor1.wav
+  source  : 
+  licence : 
+
+foley-footstep-single__01.wav  (foley-footstep-single, 0.30s)
+  DERIVED : step-single.wav
+  note    : derived: one step lifted from foley-footsteps-hall__01
+
+foley-footsteps-hall__01.wav  (foley-footsteps-hall, 4.03s)
+  source file : dragon-studio-footsteps-on-wood-397989.mp3
+  source  : 
+  licence : 
+
+foley-light-switch__01.wav  (foley-light-switch, 0.27s)
+  source file : dragon-studio-light-switch-382712.mp3
+  source  : 
+  licence : 
+
+stinger-heartbeat__01.wav  (stinger-heartbeat, 21.39s)
+  source file : dragon-studio-heartbeat-sound-372448.mp3
+  source  : 
+  licence : 
+
+stinger-hit__01.wav  (stinger-hit, 4.19s)
+  source file : stinger-hit.mp3
+  source  : 
+  licence : 
+
+stinger-riser__01.wav  (stinger-riser, 2.11s)
+  source file : riser_649826.wav
+  source  : 
+  licence : 
+
+stinger-sub-drop__01.wav  (stinger-sub-drop, 2.59s)
+  DERIVED : sub-drop.wav
+  note    : designed: falling 92->27 Hz sub with the attack of stinger-hit
+
+texture-static__01.wav  (texture-static, 5.59s)
+  source file : yourugor-tv-static-noise-291374.mp3
+  source  : 
+  licence : 
+
+transition-dip__01.wav  (transition-dip, 1.81s)
+  source file : dragon-studio-whoosh-cinematic-5-376880 (2).mp3
+  source  : 
+  licence : 
+
+transition-static-burst__01.wav  (transition-static-burst, 0.85s)
+  DERIVED : static-burst.wav
+  note    : derived: 0.85 s cut of texture-static__01 with a hard decay
+
+transition-whoosh__01.wav  (transition-whoosh, 0.40s)
+  source file : dragon-studio-simple-whoosh-382724.mp3
+  source  : 
+  licence : 
+

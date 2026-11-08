@@ -1,0 +1,448 @@
+{
+  "version": 1,
+  "note": "Role catalog for rule-horror sound design. Filenames in assets/sfx/ are matched against 'id' and 'match' terms. Gains are relative to narration at -3 dBFS peak; keep effects under the voice.",
+  "roles": [
+    {
+      "id": "transition-dip",
+      "category": "transition",
+      "use": "Section change where the picture dips to black. Sits under the fade, never over a word.",
+      "match": [
+        "transition-dip",
+        "dip",
+        "downlifter",
+        "whoosh-down"
+      ],
+      "gain": 0.55,
+      "cooldown": 20,
+      "sections": [
+        "section-change"
+      ]
+    },
+    {
+      "id": "transition-whoosh",
+      "category": "transition",
+      "use": "Rule card or chapter card entering and leaving.",
+      "match": [
+        "whoosh",
+        "swish",
+        "transition-whoosh",
+        "air-move"
+      ],
+      "gain": 0.45,
+      "cooldown": 12
+    },
+    {
+      "id": "transition-static-burst",
+      "category": "transition",
+      "use": "Analog channel change, a cut that feels like a tape splice.",
+      "match": [
+        "static-burst",
+        "tv-static",
+        "radio-static",
+        "channel-change"
+      ],
+      "gain": 0.34,
+      "cooldown": 25
+    },
+    {
+      "id": "transition-reverse-swell",
+      "category": "transition",
+      "use": "Two seconds before the reveal; stop it dead on the cut.",
+      "match": [
+        "reverse-swell",
+        "reverse-cymbal",
+        "reverse",
+        "suck"
+      ],
+      "gain": 0.42,
+      "cooldown": 60
+    },
+    {
+      "id": "stinger-hit",
+      "category": "stinger",
+      "use": "Impact on a rule reveal or a hard visual change.",
+      "match": [
+        "stinger-hit",
+        "impact",
+        "hit",
+        "boom",
+        "slam"
+      ],
+      "gain": 0.5,
+      "cooldown": 15
+    },
+    {
+      "id": "stinger-sub-drop",
+      "category": "stinger",
+      "use": "The final inversion. One per episode, on the twist line.",
+      "match": [
+        "sub-drop",
+        "bass-drop",
+        "low-boom",
+        "sub"
+      ],
+      "gain": 0.6,
+      "cooldown": 120
+    },
+    {
+      "id": "stinger-riser",
+      "category": "stinger",
+      "use": "Build across the last two beats of a section into the next one.",
+      "match": [
+        "riser",
+        "uplifter",
+        "build-up",
+        "tension"
+      ],
+      "gain": 0.4,
+      "cooldown": 60
+    },
+    {
+      "id": "stinger-heartbeat",
+      "category": "stinger",
+      "use": "Case-story tension. Loop under two or three beats, then drop out.",
+      "match": [
+        "heartbeat",
+        "heart-beat",
+        "pulse-low"
+      ],
+      "gain": 0.33,
+      "cooldown": 45
+    },
+    {
+      "id": "texture-static",
+      "category": "texture",
+      "use": "Uneasy bed under a reveal, or the last second before silence.",
+      "match": [
+        "static",
+        "white-noise",
+        "tape-hiss",
+        "hiss"
+      ],
+      "gain": 0.2,
+      "cooldown": 30
+    },
+    {
+      "id": "texture-electric-hum",
+      "category": "texture",
+      "use": "A light or appliance that should not be on.",
+      "match": [
+        "hum",
+        "electric-hum",
+        "fluorescent",
+        "buzz-low"
+      ],
+      "gain": 0.24,
+      "cooldown": 30
+    },
+    {
+      "id": "foley-door-creak",
+      "category": "foley",
+      "use": "A door moving on its own.",
+      "match": [
+        "door-creak",
+        "creak",
+        "old-door",
+        "wood-creak"
+      ],
+      "gain": 0.45,
+      "cooldown": 20,
+      "keywords": [
+        "door",
+        "doors",
+        "doorway"
+      ]
+    },
+    {
+      "id": "foley-door-lock",
+      "category": "foley",
+      "use": "A bolt or latch, especially when the rule is about locking.",
+      "match": [
+        "door-lock",
+        "deadbolt",
+        "lock-click",
+        "latch"
+      ],
+      "gain": 0.5,
+      "cooldown": 20,
+      "keywords": [
+        "lock",
+        "locked",
+        "locking",
+        "bolt",
+        "chain"
+      ]
+    },
+    {
+      "id": "foley-knob-turn",
+      "category": "foley",
+      "use": "The handle moving while nobody is there.",
+      "match": [
+        "knob",
+        "handle",
+        "doorknob"
+      ],
+      "gain": 0.45,
+      "cooldown": 25,
+      "keywords": [
+        "knob",
+        "handle"
+      ]
+    },
+    {
+      "id": "foley-light-switch",
+      "category": "foley",
+      "use": "A switch that clicks by itself.",
+      "match": [
+        "light-switch",
+        "switch",
+        "click-switch"
+      ],
+      "gain": 0.5,
+      "cooldown": 20,
+      "keywords": [
+        "light",
+        "lights",
+        "lamp",
+        "switch",
+        "bulb"
+      ]
+    },
+    {
+      "id": "foley-keys-jingle",
+      "category": "foley",
+      "use": "Keys, usually as a false reassurance.",
+      "match": [
+        "keys",
+        "keychain",
+        "jingle"
+      ],
+      "gain": 0.4,
+      "cooldown": 30,
+      "keywords": [
+        "key",
+        "keys"
+      ]
+    },
+    {
+      "id": "foley-footstep-single",
+      "category": "foley",
+      "use": "One step, close, when the narration says something is behind you.",
+      "match": [
+        "footstep",
+        "step",
+        "footsteps-single"
+      ],
+      "gain": 0.4,
+      "cooldown": 15,
+      "keywords": [
+        "step",
+        "steps",
+        "footstep",
+        "footsteps",
+        "behind"
+      ]
+    },
+    {
+      "id": "foley-footsteps-hall",
+      "category": "foley",
+      "use": "Someone approaching down a corridor.",
+      "match": [
+        "footsteps",
+        "hallway",
+        "walking"
+      ],
+      "gain": 0.34,
+      "cooldown": 30,
+      "keywords": [
+        "hallway",
+        "hall",
+        "corridor",
+        "stairs"
+      ]
+    },
+    {
+      "id": "foley-bed-sheet",
+      "category": "foley",
+      "use": "Bedding moving when the body is not moving.",
+      "match": [
+        "bed",
+        "sheet",
+        "duvet",
+        "blanket",
+        "fabric"
+      ],
+      "gain": 0.34,
+      "cooldown": 25,
+      "keywords": [
+        "bed",
+        "blanket",
+        "sheet",
+        "mattress",
+        "pillow"
+      ]
+    },
+    {
+      "id": "foley-phone-buzz",
+      "category": "foley",
+      "use": "A phone vibrating on a hard surface.",
+      "match": [
+        "phone-buzz",
+        "vibrate",
+        "buzz-phone"
+      ],
+      "gain": 0.45,
+      "cooldown": 30,
+      "keywords": [
+        "phone",
+        "vibrate",
+        "buzz",
+        "pocket"
+      ]
+    },
+    {
+      "id": "foley-phone-notification",
+      "category": "foley",
+      "use": "A message arriving, especially one that should not exist.",
+      "match": [
+        "notification",
+        "message-tone",
+        "sms",
+        "ping"
+      ],
+      "gain": 0.4,
+      "cooldown": 30,
+      "keywords": [
+        "message",
+        "text",
+        "notification",
+        "screen"
+      ]
+    },
+    {
+      "id": "foley-breath-shaky",
+      "category": "foley",
+      "use": "The protagonist's fear, close to the mic.",
+      "match": [
+        "breath",
+        "breathing",
+        "inhale",
+        "exhale"
+      ],
+      "gain": 0.32,
+      "cooldown": 30,
+      "keywords": [
+        "breath",
+        "breathing",
+        "breathe",
+        "lungs"
+      ]
+    },
+    {
+      "id": "foley-whisper-unclear",
+      "category": "foley",
+      "use": "A voice with no body. Keep it below intelligibility.",
+      "match": [
+        "whisper",
+        "whispers",
+        "voice-low"
+      ],
+      "gain": 0.28,
+      "cooldown": 45,
+      "keywords": [
+        "whisper",
+        "whispers",
+        "voice",
+        "name"
+      ]
+    },
+    {
+      "id": "foley-window-tap",
+      "category": "foley",
+      "use": "A tap at glass, from the wrong side.",
+      "match": [
+        "window-tap",
+        "glass",
+        "tap-glass",
+        "knock"
+      ],
+      "gain": 0.45,
+      "cooldown": 30,
+      "keywords": [
+        "window",
+        "glass",
+        "tap",
+        "knock"
+      ]
+    },
+    {
+      "id": "foley-clock-tick",
+      "category": "foley",
+      "use": "Time passing, or a clock that stops.",
+      "match": [
+        "clock",
+        "tick",
+        "ticking"
+      ],
+      "gain": 0.24,
+      "cooldown": 40,
+      "keywords": [
+        "clock",
+        "minute",
+        "minutes",
+        "hours",
+        "tick"
+      ]
+    },
+    {
+      "id": "amb-room-tone-night",
+      "category": "ambience",
+      "use": "Constant bed for the whole episode. Set as settings.ambience, not per beat.",
+      "match": [
+        "room-tone",
+        "night-room",
+        "quiet-house",
+        "room"
+      ],
+      "gain": 0.18,
+      "cooldown": 0
+    },
+    {
+      "id": "amb-house-settle",
+      "category": "ambience",
+      "use": "The house settling, used sparingly to punctuate a quiet line.",
+      "match": [
+        "house-settle",
+        "settle",
+        "structural",
+        "crack"
+      ],
+      "gain": 0.22,
+      "cooldown": 45
+    },
+    {
+      "id": "amb-rain-window",
+      "category": "ambience",
+      "use": "Rain on glass; also a good mask for repaired narration cuts.",
+      "match": [
+        "rain",
+        "rain-window",
+        "downpour"
+      ],
+      "gain": 0.2,
+      "cooldown": 0
+    },
+    {
+      "id": "amb-wind-low",
+      "category": "ambience",
+      "use": "Low wind outside a thin wall.",
+      "match": [
+        "wind",
+        "wind-low",
+        "draft"
+      ],
+      "gain": 0.2,
+      "cooldown": 0
+    }
+  ]
+}
