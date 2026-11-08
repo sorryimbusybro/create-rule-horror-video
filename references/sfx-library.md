@@ -37,7 +37,7 @@ an absolute path, so a project folder can be moved or shared without breaking.
 - `__01`, `__02` … are variants. With several, the pipeline picks one deterministically per
   beat: reproducible, but not the same sample twice.
 - Matching is forgiving. `Door Creak 01.wav`, `door_creak_01.wav` and
-  `foley-door-creak__01.wav` all classify correctly.
+  `foley-door-creak__01.mp3` all classify correctly.
 
 Files that match no role are ignored. That is deliberate: it stops a stray `boom-final.mp3`
 from landing on a quiet line.
@@ -88,20 +88,20 @@ stripped, so the file stays continuous.
 
 | File | Role | Length | Source |
 |---|---|---:|---|
-| `stinger-hit__01.wav` | rule reveal impact | 4.19 s | `stinger-hit.mp3` |
-| `stinger-sub-drop__01.wav` | the twist | 2.59 s | **designed** from `stinger-hit` |
+| `stinger-hit__01.mp3` | rule reveal impact | 4.19 s | `stinger-hit.mp3` |
+| `stinger-sub-drop__01.mp3` | the twist | 2.59 s | **designed** from `stinger-hit` |
 | `stinger-riser__01.wav` | build into a reveal | 2.11 s | `riser_649826.wav` (96 kHz source) |
-| `stinger-heartbeat__01.wav` | case story | 21.39 s | `dragon-studio-heartbeat` |
+| `stinger-heartbeat__01.mp3` | case story | 21.39 s | `dragon-studio-heartbeat` |
 | `transition-dip__01.wav` | section change | 1.81 s | `whoosh-cinematic-5` |
 | `transition-whoosh__01.wav` | card in / out | 0.40 s | `simple-whoosh` |
 | `transition-static-burst__01.wav` | tape splice | 0.85 s | **derived** from `texture-static` |
-| `texture-static__01.wav` | analog unease bed | 5.59 s | `tv-static-noise` |
-| `foley-door-creak__01.wav` | door moving | 2.61 s | `freesound door-creak` |
+| `texture-static__01.mp3` | analog unease bed | 5.59 s | `tv-static-noise` |
+| `foley-door-creak__01.mp3` | door moving | 2.61 s | `freesound door-creak` |
 | `foley-door-lock__01.wav` | bolt, latch | 0.86 s | `soundbyter lockingdoor1` |
 | `foley-light-switch__01.wav` | switch clicks | 0.27 s | `dragon-studio-light-switch` |
-| `foley-footsteps-hall__01.wav` | approach | 4.03 s | `footsteps-on-wood` |
+| `foley-footsteps-hall__01.mp3` | approach | 4.03 s | `footsteps-on-wood` |
 | `foley-footstep-single__01.wav` | one step behind you | 0.30 s | **derived** from the walk |
-| `amb-room-tone-night__01.wav` | continuous bed | 44.81 s loop | `ambience-room-tone` |
+| `amb-room-tone-night__01.mp3` | continuous bed | 44.81 s loop | `ambience-room-tone` |
 
 Four files are designed or derived from the supplied material, not downloaded:
 
@@ -110,6 +110,10 @@ Four files are designed or derived from the supplied material, not downloaded:
 - `transition-static-burst` — 0.85 s cut of the static with a hard decay.
 - `foley-footstep-single` — one step lifted out of the walk.
 - `amb-room-tone-night` — the 2-minute source trimmed to a 45 s loop.
+
+Small effects are stored as PCM WAV. The seven longer ones are MP3 at 96 kbps, and the room
+tone at 48 kbps, which keeps the whole library near 2 MB. FFmpeg decodes either format, so the
+pipeline does not care which one it finds.
 
 Replacing any of them is fine: drop a better file in with the same role and rerun
 `sfx_ops.py import`.

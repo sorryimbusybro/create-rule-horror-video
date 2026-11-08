@@ -172,8 +172,8 @@ There is a second script for sounds.
 ## The sound library
 
 The skill comes with fourteen sound effects already prepared, so placement works out of the
-box. Every file is named after its role, trimmed, levelled and converted to 48 kHz. Files sit
-in `assets/sfx/`.
+box. Every file is named after its role, trimmed and levelled. Short effects are PCM WAV, the
+longer ones are MP3 at 96 kbps so the whole library stays near 2 MB. Files sit in `assets/sfx/`.
 
 To add your own, put the downloads in a folder and run the importer. Do not rename them by
 hand, the importer does it properly.

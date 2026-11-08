@@ -2,7 +2,7 @@
   "version": 1,
   "files": [
     {
-      "file": "amb-room-tone-night__01.wav",
+      "file": "amb-room-tone-night__01.mp3",
       "role": "amb-room-tone-night",
       "category": "ambience",
       "source": "room-tone-45s.wav",
@@ -17,10 +17,11 @@
       "mode": "loop",
       "channels": 2,
       "note": "trimmed to a 45 s loop from the 2 min source",
-      "derived": true
+      "derived": true,
+      "codec": "mp3"
     },
     {
-      "file": "foley-door-creak__01.wav",
+      "file": "foley-door-creak__01.mp3",
       "role": "foley-door-creak",
       "category": "foley",
       "source": "freesound_community-door-creak-38423.mp3",
@@ -33,7 +34,8 @@
       "peak_db": -6.0,
       "rms_db": -21.87,
       "mode": "one-shot",
-      "channels": 1
+      "channels": 1,
+      "codec": "mp3"
     },
     {
       "file": "foley-door-lock__01.wav",
@@ -49,7 +51,8 @@
       "peak_db": -6.0,
       "rms_db": -28.66,
       "mode": "one-shot",
-      "channels": 2
+      "channels": 2,
+      "codec": "pcm_s16le"
     },
     {
       "file": "foley-footstep-single__01.wav",
@@ -67,10 +70,11 @@
       "mode": "one-shot",
       "channels": 2,
       "note": "derived: one step lifted from foley-footsteps-hall__01",
-      "derived": true
+      "derived": true,
+      "codec": "pcm_s16le"
     },
     {
-      "file": "foley-footsteps-hall__01.wav",
+      "file": "foley-footsteps-hall__01.mp3",
       "role": "foley-footsteps-hall",
       "category": "foley",
       "source": "dragon-studio-footsteps-on-wood-397989.mp3",
@@ -83,7 +87,8 @@
       "peak_db": -6.0,
       "rms_db": -26.59,
       "mode": "one-shot",
-      "channels": 1
+      "channels": 1,
+      "codec": "mp3"
     },
     {
       "file": "foley-light-switch__01.wav",
@@ -99,10 +104,11 @@
       "peak_db": -6.0,
       "rms_db": -34.5,
       "mode": "one-shot",
-      "channels": 2
+      "channels": 2,
+      "codec": "pcm_s16le"
     },
     {
-      "file": "stinger-heartbeat__01.wav",
+      "file": "stinger-heartbeat__01.mp3",
       "role": "stinger-heartbeat",
       "category": "stinger",
       "source": "dragon-studio-heartbeat-sound-372448.mp3",
@@ -115,10 +121,11 @@
       "peak_db": -3.0,
       "rms_db": -21.68,
       "mode": "one-shot",
-      "channels": 2
+      "channels": 2,
+      "codec": "mp3"
     },
     {
-      "file": "stinger-hit__01.wav",
+      "file": "stinger-hit__01.mp3",
       "role": "stinger-hit",
       "category": "stinger",
       "source": "stinger-hit.mp3",
@@ -131,7 +138,8 @@
       "peak_db": -3.0,
       "rms_db": -15.74,
       "mode": "one-shot",
-      "channels": 2
+      "channels": 2,
+      "codec": "mp3"
     },
     {
       "file": "stinger-riser__01.wav",
@@ -147,10 +155,11 @@
       "peak_db": -3.0,
       "rms_db": -20.33,
       "mode": "one-shot",
-      "channels": 2
+      "channels": 2,
+      "codec": "pcm_s16le"
     },
     {
-      "file": "stinger-sub-drop__01.wav",
+      "file": "stinger-sub-drop__01.mp3",
       "role": "stinger-sub-drop",
       "category": "stinger",
       "source": "sub-drop.wav",
@@ -165,10 +174,11 @@
       "mode": "one-shot",
       "channels": 1,
       "note": "designed: falling 92->27 Hz sub with the attack of stinger-hit",
-      "derived": true
+      "derived": true,
+      "codec": "mp3"
     },
     {
-      "file": "texture-static__01.wav",
+      "file": "texture-static__01.mp3",
       "role": "texture-static",
       "category": "texture",
       "source": "yourugor-tv-static-noise-291374.mp3",
@@ -181,7 +191,8 @@
       "peak_db": -9.0,
       "rms_db": -20.22,
       "mode": "loop",
-      "channels": 2
+      "channels": 2,
+      "codec": "mp3"
     },
     {
       "file": "transition-dip__01.wav",
@@ -197,7 +208,8 @@
       "peak_db": -3.0,
       "rms_db": -24.24,
       "mode": "one-shot",
-      "channels": 2
+      "channels": 2,
+      "codec": "pcm_s16le"
     },
     {
       "file": "transition-static-burst__01.wav",
@@ -215,7 +227,8 @@
       "mode": "one-shot",
       "channels": 2,
       "note": "derived: 0.85 s cut of texture-static__01 with a hard decay",
-      "derived": true
+      "derived": true,
+      "codec": "pcm_s16le"
     },
     {
       "file": "transition-whoosh__01.wav",
@@ -231,8 +244,10 @@
       "peak_db": -3.0,
       "rms_db": -18.59,
       "mode": "one-shot",
-      "channels": 2
+      "channels": 2,
+      "codec": "pcm_s16le"
     }
   ],
-  "updated": "2026-11-08T21:19:12"
+  "updated": "2026-11-08T21:19:12",
+  "note": "Larger effects are stored as MP3 to keep the repository small. Small ones stay PCM WAV."
 }
