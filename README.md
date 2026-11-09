@@ -312,10 +312,11 @@ image model.
 
 ## Things that will trip you up
 
-Renders take time. Every frame is drawn by WebGL, so a twelve minute episode at 1080p30 is
-roughly twenty to thirty five minutes on a four core machine, plus a few seconds once per
-batch to start the browser. Run `stills` and a ten beat preview first; both are cheap and
-catch almost everything.
+Renders take time. Every frame is drawn by WebGL, and the measured rate is about six frames
+a second at 1080p30 on a four core machine, so budget roughly four to five times the finished
+length: a twelve minute episode is close to an hour. A 960x540 preview is several times
+faster per frame because it draws a quarter of the pixels. Run `stills` and a ten beat
+preview first; both are cheap and catch almost everything.
 
 The `python` on your PATH might not have the packages. If you get a missing module error, use
 the full path to the Python that does.
