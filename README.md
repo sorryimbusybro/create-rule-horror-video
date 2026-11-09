@@ -268,9 +268,13 @@ replace a sound file, render with `--force`.
 Nothing here promises views. The structure is built to hold attention, but the story and the
 art still decide whether it works.
 
-## Licences
+## Licence
 
-The code is yours to use and change.
+The code is under the MIT licence. See the `LICENSE` file for the full text.
+
+In plain words, you can use it, change it, sell what you make with it, and share it. You do
+not have to credit me, but you do have to keep the copyright line in the `LICENSE` file. It
+comes with no warranty, so if a render eats your weekend that is on you.
 
 The sound files keep their own licences. They came from Freesound, Pixabay and similar
 sources. `assets/sfx/licenses.txt` lists every file with empty lines for the source and the
