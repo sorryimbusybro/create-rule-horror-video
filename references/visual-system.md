@@ -1,183 +1,318 @@
 # Visual System
 
-The pictures carry half the retention. A plain figure on an empty background reads as
-unfinished and viewers leave before the first rule lands. Every plate must be a
-**composed illustration**: a designed character, a layered location, one light source,
-and atmosphere.
+**No images are generated.** Every pixel is drawn by code. A headless Chrome or Edge builds
+each beat as a three.js scene from geometry and lights, renders it to a canvas, composites
+the grade, grain, vignette and type layer in 2D, and encodes H.264 through WebCodecs. There
+is no image model, no plate file, no reference sheet and no prompt to paste anywhere.
 
-Two presets ship with the skill. Pick one per series and never mix them inside an episode.
+The practical consequences are worth stating up front:
+
+- A scene costs CPU time, not credits or tokens. Change it as often as you like.
+- Continuity is structural. The same `place`, `seed` family and `garment` colour produce the
+  same room and the same person in beat 1 and beat 120. There is no drift to correct.
+- Anything you want on screen must be built in `scripts/scene/src/`. Adding a new prop or
+  location means adding geometry, not writing a better sentence.
+
+`doctor` checks the whole chain. Run it before promising a render.
+
+## How one frame is made
+
+```
+scene block (JSON)
+  -> builders.js      14 procedural locations: walls, floor, doors, props, practical light
+  -> figure.js        character and optional entity, both built from tapered geometry
+  -> runtime.js       subject-driven camera, fill light, rim light, fog, exposure
+  -> WebGL render     ACES filmic tone mapping, soft shadows, sRGB output
+  -> 2D composite     saturate / contrast / brightness, vignette, film grain
+  -> overlay.js       HUD, caption, rule card — exact vector typography
+  -> VideoEncoder     avc1.640028 Annex B H.264 streamed back to the Node driver
+  -> FFmpeg           -c:v copy into a per-beat MP4
+```
+
+If the browser has no WebCodecs H.264 support, `runtime.js` falls back to streaming JPEG
+frames; `visual_ops.py` muxes those with `libx264`. Either way the output is the same clip.
+
+Frames are deterministic functions of time. `renderAt(t)` positions the camera, flickers the
+light, moves the dust motes and sways the figure from `t` alone, so a still at the mid-point
+of a beat matches the middle of the rendered clip.
+
+## Two style presets
+
+Pick one per series and never mix them inside an episode. `init --style <preset>` writes
+`palette.json` and `scene-guide.txt` into the project.
 
 | Preset | Look | Use when |
 |---|---|---|
-| `warm-flat` | Illustrated flat-vector storybook, warm dusk, cute character in an unsettling world | Default for new channels; closest to the supplied reference frame |
-| `noir-line` | Monochrome ivory line art on near-black, one amber practical light | Closest to the Lullorin-style references |
+| `warm-flat` | Warm dusk interior, deep plum shadows, one amber practical, saturated garment | Default. Most readable at phone size |
+| `noir-line` | Near-black rooms, cold key light, one amber source, heavy grain | Analog-horror channels |
 
-`init --style <preset>` writes `style-lock.txt` and `palette.json` into the project.
-Paste `style-lock.txt` into **every** image request. Consistency comes from repeating the
-same lock, not from hoping the model remembers.
+| Token | `warm-flat` | `noir-line` | Use |
+|---|---|---|---|
+| `background` | `#1B1418` | `#050506` | clear colour and fog colour |
+| `wall` | `#6B5852` | `#1A1C1D` | walls and doors |
+| `shadow` | `#3A2E30` | `#0C0D0E` | floor and shadow planes |
+| `ink` | `#241C22` | `#0A0B0C` | trim, frames, silhouettes |
+| `ivory` | `#F4EAD8` | `#E4E1D7` | captions, paper, highlights |
+| `amber` | `#E3A94E` | `#BE893E` | the practical light, rule cards |
+| `garment` | `#E05F38` | `#2A2D30` | the character's clothing only |
+| `sage` | `#7C9270` | `#5B6160` | plants, one secondary prop |
+| `red` | `#D6402F` | `#BE2D28` | final warning only, at most twice an episode |
 
-## Warm Flat construction
+The character's skin is **not** the palette ink. It defaults to pale `#F4EDE0`. That is a
+deliberate contrast decision: a dark head on a dark wall disappears, while pale skin, hands
+and arms read clearly against a black environment. Keep it pale. The clothing stays as
+specified by the style.
 
-### Canvas and layers
+## Scene block reference
 
-Build every plate as a stack, back to front. A plate missing layers 1–4 looks cheap.
+Every beat has a `scene` object. `visual_ops.normalise_scene()` validates and fills defaults,
+so unknown values fall back rather than crashing a long render — but `validate` flags them.
 
-1. **Sky / wall field.** Vertical gradient, two or three stops, warm at the horizon and
-   deep plum above. Never a flat fill.
-2. **Distance.** City skyline, tree line, corridor depth, or fence silhouette at 30–45%
-   opacity, slightly hazier than the foreground.
-3. **Architecture.** Window frames, door frames, shelves, skirting, floor plane. Thin
-   dark mullions against the bright field give instant depth.
-4. **Props.** Three to six readable objects: book spines, a lamp, a mug, a plant, a chair,
-   a coat hook. Colour them from the accent range, not random hues.
-5. **Character.** One figure, off-centre on a third.
-6. **Light.** One warm key with soft bloom, a shadow wedge on the floor or wall, gentle
-   falloff. Light direction stays the same across the episode.
-7. **Atmosphere.** Eight to twenty dust motes, very soft vignette, fine grain.
+```json
+{
+  "place": "hallway",
+  "seed": 7,
+  "depth": 11,
+  "camera": {
+    "shot": "medium",
+    "move": "push",
+    "amount": 0.24,
+    "handheld": 0.2,
+    "fov": 38,
+    "fraction": 0.5,
+    "distance": 4.2,
+    "lift": 0.18,
+    "height": 1.6,
+    "pos": [0, 1.6, 4],
+    "target": [0, 1.4, 0]
+  },
+  "figure": {
+    "pose": "stand", "expression": "absent",
+    "x": 0, "y": 0, "z": -3.2,
+    "facing": 0, "height": 1.68,
+    "garment": "#E05F38", "skin": "#F4EDE0", "trousers": "#4A3B52",
+    "rim": 1.4, "rimX": 0.8, "sway": 0.0
+  },
+  "entity": { "pose": "stand", "x": 0.8, "y": 0, "z": -5.5, "facing": 0, "height": 2.15 },
+  "light": { "flicker": 0.08, "pulse": 0, "off": false, "color": "#F2C079", "intensity": 6 },
+  "atmosphere": { "fog": 0.035 },
+  "fill": 0.26,
+  "halo": 1,
+  "item": "phone"
+}
+```
 
-### Character proportions
-
-Measured in head-heights (H = head diameter). Total height ≈ 3.1 H.
-
-| Part | Specification |
+| Field | Meaning |
 |---|---|
-| Head | Perfect circle, 1.0 H, deep charcoal-plum `#241C22`, no neck |
-| Torso | Rounded trapezoid, 1.15 H tall, shoulders 0.85 H wide, saturated garment colour |
-| Arms | Tapered capsules, 1.1 H long, 0.20 H thick at shoulder tapering to 0.13 H |
-| Hands | Circles of 0.16 H, same fill as head |
-| Legs | Tapered capsules, 0.95 H long, 0.22 H thick |
-| Shoes | Rounded rectangles, 0.30 H long, 0.12 H tall |
-| Eyes | Two white almonds, each 0.30 H wide, 0.18 H apart |
-| Pupils | Small dark ovals, 0.09 H, sitting slightly high |
-| Mouth | One curved stroke or filled crescent, 0.34 H wide |
+| `place` | Which procedural location to build. See the list below. |
+| `seed` | Seeds prop placement, branches, motes and clutter. Stable per beat; reuse a seed family for one room. |
+| `depth` | Corridor/room length where the location uses it. |
+| `camera.shot` | `wide`, `medium`, `close`, `insert` — sets how much of the frame the subject fills. |
+| `camera.move` | `static`, `push`, `pull`, `drift-left`, `drift-right`, `rise`, `crane`. |
+| `camera.amount` | Travel over the beat, default `0.22`. Small values read as dread, not motion. |
+| `camera.handheld` | Camera shake, `0`–`1`. A little goes a long way. |
+| `camera.fov` / `fraction` / `distance` / `lift` / `height` | Manual overrides for the framing maths. Leave these alone unless a still proves you need them. |
+| `camera.pos` / `target` | Absolute camera override; bypasses subject-driven framing entirely. |
+| `figure` | Omit it for an empty room. Presence of `figure` switches framing to subject-driven. |
+| `entity` | A tall near-black silhouette built by the same figure code with `silhouette: true` and a `hidden` face. Use sparingly. |
+| `light` | `flicker` and `pulse` animate the strongest practical in the room; `off` kills it; `color` recolours it; `intensity` sets the base. |
+| `atmosphere.fog` | `FogExp2` density, default `0.035`. Above `0.09` the room vanishes. |
+| `fill` | Camera-side fill light strength, default `0.26`. Raise it if a foreground reads pure black. |
+| `halo` | Multiplier for the soft light halos on practicals. `0` disables them. |
+| `item` | For `place: "object"`: `phone`, `key`, `photo`, `lock`, `paper`. |
 
-Rules that separate a designed character from a stick figure:
+`scene` may also be a plain string (`"hallway"`), which becomes `{ place: "hallway" }`.
+`camera.move` may sit on the beat instead of inside the scene. Legacy names `push-in`,
+`pull-back`, `pan-left`, `pan-right` are aliased to the current moves.
 
-- Limbs are **filled tapered shapes**, never single lines.
-- The torso overlaps the head slightly; there is no visible neck.
-- Clothing has at least one seam or fold, so the body reads as a body.
-- Hands are shapes, not dots at the end of a line.
-- The character occupies 25–45% of frame height. A tiny figure on a huge empty field is
-  a composition error, not minimalism.
+## Locations
 
-### Face vocabulary
+`visual_ops.py places` prints the live list. All 14 are built in `scripts/scene/src/builders.js`:
 
-Keep the face to eyes and mouth. Emotion is carried by shape, not detail:
+`hallway`, `bedroom`, `kitchen`, `living`, `bathroom`, `basement`, `attic`, `stairwell`,
+`forest`, `road`, `field`, `void`, `object`.
+
+Each builder returns a `THREE.Group` with an authored `userData.camera` anchor and, for
+interiors, `userData.bounds` — the room shell. The runtime clamps the camera inside those
+bounds so you never see the black back face of a wall. A few notes:
+
+- `hallway` builds a lit corridor with skirting, door frames, spaced practical bulbs and a
+  doorway offset to the right so its light strip does not cut through the character's head.
+- `void` is an empty dark field used for full-screen rule cards. Put the text in `overlay`.
+- `object` frames a single prop with an `insert` shot; it is the only place where the
+  subject is 0.42 units tall, so do not add a `figure` there.
+- `forest`, `road` and `field` are outdoors; fog does most of the depth work.
+
+## Character construction
+
+`figure.js` builds a real 3D body — no billboards, no stick lines.
+
+| Part | Construction |
+|---|---|
+| Head | Sphere, pale skin, no neck; overlaps the torso slightly |
+| Torso | Tapered rounded form, shoulders at `0.375 × H`, narrowed waist |
+| Arms | Tapered filled cylinders, radii `0.105 × H` to `0.07 × H`, spherical joints and hands |
+| Legs | Tapered filled cylinders, dark trousers `#4A3B52` |
+| Garment | One saturated colour from the palette; a seam or fold gives the body volume |
+| Eyes / mouth | Small flat shapes on the face plane; two almonds, pupils, one mouth stroke |
+
+**Contrast logic.** The figure reads the lightness of its own skin material with
+`getHSL()`. When the skin is pale (luma > 0.55) the eyes, pupils and mouth switch to dark
+ink `#221A20`; with dark skin they would be ivory. This is why the pale default keeps a
+legible face on a black wall without any extra lighting.
+
+**Face vocabulary** (`figure.expression`):
 
 | Expression | Eyes | Mouth |
 |---|---|---|
-| Neutral | almonds, pupils centred | short soft curve |
-| Uneasy | pupils shifted toward the threat, brows absent | flat line |
-| Smiling wrong | pupils fixed forward, no eye movement | wide crescent, too high |
-| Afraid | tall almonds, pupils small | small open oval |
-| Absent | solid white almonds, no pupils | none |
+| `neutral` | almonds, centred pupils | soft curve |
+| `uneasy` | pupils shifted toward one side | flat line |
+| `wrong` | pupils fixed forward | wide crescent, too high |
+| `afraid` | tall almonds, small pupils | small open oval |
+| `absent` | solid almonds, no pupils | none |
+| `hidden` | none | none (used for the entity) |
 
-The last two do the horror work. A cute face that stops reacting is more frightening than
-a monster.
+The last two do the horror work. A face that stops reacting is more frightening than a
+monster.
 
-### Palette
+**Poses** (`figure.pose`): `stand`, `sit`, `kneel`, `lie`, `walk`, `crouch`, `reach`,
+`point`, `head-tilt`, `back-turn`. `facing` is degrees of Y rotation. `sway` adds a slow
+breathing motion over the beat; keep it near `0` for a held, uncanny stillness.
 
-| Token | Hex | Use |
-|---|---|---|
-| `ink` | `#241C22` | head, dark furniture, silhouettes |
-| `wall` | `#6B5852` | walls, doors, muted architecture |
-| `shadow` | `#3A2E30` | shadow planes, floor |
-| `ivory` | `#F4EAD8` | captions, eyes, paper, highlights |
-| `amber` | `#E3A94E` | practical light, rule cards, warmth |
-| `garment` | `#E05F38` | the character's clothing only |
-| `sage` | `#7C9270` | plants, one secondary prop |
-| `red` | `#D6402F` | final warning only, at most twice per episode |
+`figure.garment`, `skin`, `trousers`, `rim`, `rimX` are per-beat overrides. Set them once
+for the episode and leave them — the figure must read as one person.
 
-Sky peach `#F6D8A6` and sun glow `#FFEDBE` belong to the light, not to objects.
+## Camera and framing
 
-### Horror modulation
+Framing is computed from the **subject**, not from a fixed camera distance:
 
-The style is warm and cute; the fear comes from three adjustments:
-
-1. **Desaturate 10–20%** and push shadows toward plum, so the warmth reads as dusk rather
-   than daylight.
-2. **Empty the middle.** Leave one large area with nothing in it, and put the anomaly
-   there — an open door, a chair facing the wall, a shape at the window.
-3. **Break the light logic once.** A lamp that is off but still casting light, a shadow
-   pointing at the wrong wall, a window showing a sky that does not match the room.
-
-## Noir Line construction
-
-Same layering, different rendering: near-black field, even-weight ivory contour lines,
-flat charcoal fills, a single amber practical light, no colour except one red accent at
-the reveal. Character is an egg-shaped head with dot eyes, narrow torso, tapered limbs,
-no fingers. Keep line weight constant across the episode.
-
-## Prompt assembly
-
-Every plate is five blocks, in this order. Keep the wording identical between shots; only
-the `SCENE` block changes.
-
-```text
-[STYLE LOCK]      exact text from style-lock.txt, first line
-[CHARACTER]       exact text from style-lock.txt, second block
-[SCENE]           location, action, framing, what changed since the last plate
-[COMPOSITION]     16:9, character on the left/right third, lower 22% dark and clear
-[NEGATIVE]        exact text from style-lock.txt, third block
+```
+distance = (subjectHeight / fraction) / (2 * tan(fov / 2))
 ```
 
-Example `SCENE` block:
+`fraction` is how much of the frame height the subject should occupy:
 
-> The same character stands at the end of a hallway, back to the viewer, facing a door
-> that is open exactly one hand's width. A thin amber line of light falls across the
-> floor from the gap. No other light source. Medium-wide shot, character on the right
-> third, a long empty hallway filling the left two thirds.
-
-Do not ask the model for text, numbers, labels, or signage. Rule cards, timecodes and
-captions are drawn by the renderer, where typography is exact.
-
-## Character sheet workflow
-
-1. Generate one reference sheet: four full-body views (front, three-quarter, side, back)
-   plus three head expressions, on a plain deep-plum field, no text.
-2. Inspect it. Reject and regenerate if limbs are sticks, the head is the wrong size, the
-   garment colour drifts, or hands are malformed.
-3. Save it as `assets/character/character-sheet.png` and treat it as canon.
-4. For every subsequent plate, pass the sheet as an image reference (image-to-image) with
-   high input fidelity, and repeat the `CHARACTER` block in the prompt.
-5. Keep the same seed or reference across an episode. If a plate drifts, regenerate it
-   from the sheet rather than from the previous plate, so errors do not accumulate.
-
-## Plate budget and reuse
-
-A 10–14 minute episode needs **15–30 unique plates**, not one per sentence.
-
-- One wide establishing plate per location.
-- One medium per recurring action.
-- Object inserts for phones, locks, keys, photographs, door gaps, bedding.
-- Two or three entity variations: a changed silhouette, an extra shape in the dark, a
-  face that has lost its pupils.
-- One final plate for the inversion.
-
-Reuse is correct. Change one variable per return: light state, framing, a moved object, a
-new shadow. The renderer adds motion, grade, grain and vignette, so a reused plate never
-looks identical twice.
-
-## Composition rules
-
-- Character on a third, never dead centre, unless the beat is a deliberate stare.
-- Keep the bottom 22% dark and uncluttered; captions live there.
-- Leave the top 8% quiet; the HUD sits there.
-- One idea per plate. If two things compete, split into two beats.
-- Horizontals and verticals should be true; a tilted frame reads as an accident.
-
-## Generated-image defects and fixes
-
-| Defect | Fix |
+| Shot | Fraction |
 |---|---|
-| Stick limbs, wire arms | Repeat "filled tapered shapes, never single thin sticks"; regenerate |
-| Corner watermark or logo | Set `settings.clean_edges` (`bottom: 0.075, right: 0.02`) and re-render |
-| Text or letters baked into the plate | Add "no text, no letters, no numbers" first in the negative; regenerate |
-| Head too small / body too tall | Restate the head-height ratio; regenerate from the character sheet |
-| Flat empty background | Name the layers explicitly: sky, distance, architecture, props |
-| Garment colour drifts | Quote the hex in every prompt; do not describe it as "orange" |
-| Extra fingers or fused hands | Simplify to "small circular hands, no fingers" |
-| Inconsistent room geometry | Keep a single establishing plate and derive inserts from it |
+| `wide` | 0.30 |
+| `medium` | 0.50 |
+| `close` | 0.74 |
+| `insert` | 0.92 |
 
-Never ship a plate you have not looked at full size. Malformed hands and stray text are
-the two defects that get a video mocked in the comments.
+The camera looks at `figure.y + height × focusY`, where `focusY` is 0.54 normally and 0.58
+for a close-up. When the beat has an `overlay` rule card, the target is lifted by
+`height × 0.16` so the character sits below the card instead of behind it. Captions live at
+`caption.position` (default 0.88) in the lower safe area.
+
+If the computed camera would land outside an interior, `userData.bounds` clamps it and the
+FOV is widened (up to 56°) to keep the subject the size the shot asked for. This is why
+`close` shots do not put the camera inside the character's chest and why a small bedroom
+still frames correctly.
+
+Camera moves are eased linearly across the beat's duration:
+
+| Move | Effect |
+|---|---|
+| `static` | Nothing; the scene still has light flicker, motes and sway |
+| `push` / `pull` | Scale the camera-to-target offset by `1 ∓ amount × progress` |
+| `drift-left` / `drift-right` | Lateral slide proportional to offset length |
+| `rise` | Slow vertical lift |
+| `crane` | Lift combined with a slight push |
+| `handheld` | Two sine components on position and a tiny roll; independent of the move |
+
+## Light, atmosphere and film finish
+
+- Each location owns one **practical** light (a bulb, lamp or door gap). It is the strongest
+  point/spot in the group; `runtime.js` finds it and uses it as the key. Shadow maps are
+  1024² with `near 0.3 / far 16`, which keeps the depth buffer from burning out.
+- A **fill** light sits just behind the camera. Its intensity scales with the square of the
+  camera distance (`clamp(base × d², 1.5, 42)`), so a distant wide shot is not pitch black
+  and a close shot is not blown out.
+- A cool **rim** light behind the figure separates pale skin from a dark wall.
+- `light.flicker` modulates the key with three summed sines (11.3, 4.1 and 27.7 Hz) so it
+  never looks like a regular strobe. `light.pulse` is a slow 1.1 Hz breath.
+- `FogExp2`, dust motes (`THREE.Points`) and light halos supply depth. Motes drift as a
+  function of time, so they animate without any frame-to-frame state.
+- The 2D pass applies `ctx.filter = saturate(...) contrast(...) brightness(...)` from
+  `settings.grade`, then a radial vignette and a single `createPattern` grain fill. Grain is
+  one `fillRect`, not dozens of draw calls — that change alone cut frame time sharply.
+- Exposure is `0.95` with ACES filmic tone mapping and sRGB output.
+
+Override the grade per project in `settings.grade`: `saturation`, `contrast`, `brightness`,
+`grain`, `vignette`. All five are read by `visual_ops.driver_settings()`.
+
+## Type layer
+
+`overlay.js` draws all text on the 2D canvas after the 3D render, so typography is exact at
+any resolution and no text is ever baked into geometry.
+
+- **HUD**: small `brand` label top left, `episode` top right. Keep the top 8% quiet.
+- **Caption**: `beat.caption` (falls back to narration), uppercase if
+  `settings.caption.uppercase`, positioned by `settings.caption.position`, with an optional
+  dark legibility band. `emphasis` words are drawn in the beat's `accent` colour.
+- **Rule card**: `beat.overlay` with `overlay_style: "card"`. The card starts at 12% from
+  the top, wraps `\n` into paragraphs, and caps itself at three lines with an automatic
+  font-size reduction. It never covers the subject's face because the camera lifts its
+  target whenever an overlay is present.
+
+Use `void` + `overlay` for full-screen rule cards. Use `red` at most twice per episode.
+
+## Planning a sequence
+
+A 10–14 minute episode has 75–130 beats but only a handful of rooms. That is fine: the
+renderer rebuilds the room per beat, so repetition is a framing and lighting question, not
+an asset question.
+
+- One `wide` establishing beat per location, usually with no `figure`.
+- `medium` for reactions; change `figure.expression` and `figure.pose` as the rules tighten.
+- `close` for the moment the entity is understood, not before.
+- `insert` / `object` for phones, keys, locks, photographs and paper.
+- `void` with a card at each rule heading and at the final command.
+- `entity` in two or three beats only; it is most effective when it is an extra shape in
+  the dark of an otherwise familiar room.
+- Change **one** variable per return to a location: light state, shot, a moved figure, a
+  new pose, denser fog. The last beat inverts a normal condition rather than introducing a
+  new monster.
+
+Prefer a single idea per beat. If two things compete, split into two beats — it costs
+nothing but render time.
+
+## Inspect with stills
+
+```bash
+python "<skill>/scripts/video_pipeline.py" stills "<project>" --beats 10
+python "<skill>/scripts/visual_ops.py" places
+python "<skill>/scripts/visual_ops.py" still --scene scene.json --out preview.png
+```
+
+`stills` writes one PNG per beat at the mid-point of its duration. Open them full size. The
+renderer is code, so a defect is a bug or a bad spec value, never a random generation
+artifact — fix the `scene` block or the builder and re-run.
+
+| Defect | Cause | Fix |
+|---|---|---|
+| Completely black frame | Camera clamped outside the room shell, or key light disabled | Check `light.off`; use a wider `shot`; verify `userData.bounds` for that place |
+| Character invisible against the wall | Skin overridden to a dark colour | Restore pale `skin` (default `#F4EDE0`) or raise `fill` |
+| Room blown out / flat white slabs | Fill or key intensity far too high | Lower `fill`, lower `light.intensity`; exposure is `0.95` |
+| Camera inside the character's head | Hand-set `camera.distance` or `camera.pos` too close | Remove the overrides and let `shot` compute the distance |
+| Rule card sits over the face | Hand-set `camera.target` overriding the card lift | Remove the target override, or set `camera.lift` |
+| Caption cut off | Caption longer than `settings.caption.max_chars` | Shorten the caption or raise the limit |
+| Grain / banding in dark areas | `grade.grain` or `vignette` too strong for the encoder | Reduce `grade.grain`; `vignette` default is 0.45–0.62 |
+| Hard shadow rectangle across the scene | Shadow camera `far` too large | Shadow near/far are `0.3 / 16`; do not widen without a reason |
+| Bright "smear" beams across the room | Light shaft planes | These were removed; do not re-add transparent shaft quads |
+| Same room looks like a different room | Different `seed` each visit | Reuse a seed family per location, change only light/shot/pose |
+
+## Performance notes
+
+- The browser starts once per batch; every beat reuses the same WebGL context. Do not
+  launch one browser per beat.
+- H.264 chunks are POSTed to the Node driver and appended to an elementary stream; the
+  driver's `taskkill /T` shutdown takes the whole browser tree down so long runs do not
+  leak processes.
+- Clip caching is a SHA-256 of the normalised scene, text, duration, size, fps, style and
+  relevant settings. Change any of those and only that beat re-renders. `render --force`
+  bypasses it.
+- Grade and grain are one filter plus one pattern fill per frame — cheap enough to keep
+  in-page. The final FFmpeg pass copies video and only re-encodes audio.
+- Preview at 960×540 first. Render the full episode once the stills and the ten-beat
+  preview are right.

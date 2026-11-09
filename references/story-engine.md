@@ -120,7 +120,26 @@ A strong ending satisfies all three tests:
 
 Do not add an unrelated jump scare after the twist. End quickly on the final command, a short silence, and an original title card.
 
-## 8. Story quality rubric
+## 8. Storyboard as scene blocks
+
+Visuals are drawn in code, so write each beat's staging as a `scene` object rather than a
+description for an image model. See [visual-system.md](visual-system.md) for the full field
+reference.
+
+- Map each rule to a `place` and keep that place for the rule's section. Continuity is free:
+  the same builder produces the same room every beat.
+- Put object clues in `place: object` inserts (`phone`, `key`, `photo`, `lock`, `paper`) and
+  deliver rule headings with `place: void` plus an `overlay` card.
+- Escalate with one changed variable per return: `figure.expression`, `figure.pose`,
+  `light.flicker`, `light.off`, `atmosphere.fog`, or a single `entity` silhouette in the
+  dark. A changed detail is cheaper and more frightening than a new monster.
+- Hold `camera.move: static` for dread and use `push` only when the narration closes a gap.
+- Save `close` shots for the moment the entity's goal becomes clear.
+- Check that every beat can be staged from the available places, shots, poses and
+  expressions. If a story beat needs a location that does not exist, add a builder in
+  `scripts/scene/src/builders.js` — do not substitute an image.
+
+## 9. Story quality rubric
 
 Revise until every answer is yes:
 

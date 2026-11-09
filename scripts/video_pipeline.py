@@ -4,16 +4,20 @@
 Beat-level project -> repaired narration -> captioned, graded, rendered MP4.
 
 Commands
-    init      scaffold a project (writes project.json, style-lock.txt, palette.json)
+    init      scaffold a project (writes project.json, scene-guide.txt, palette.json)
     audio     import user narration (recording / ElevenLabs / any mp3-wav) and repair it
     narrate   OPTIONAL text-to-speech, only when the user has no voiceover
     align     split one continuous voiceover file into beats
     validate  structural + asset checks
     timeline  per-beat table with durations and words-per-minute
+    sfx       place sound effects by role
+    stills    render one PNG per beat for inspection
     render    preview or final MP4
     qc        extract frames, measure loudness, detect dead air
+    doctor    check the toolchain and the sound library
 
-Voice is never required. Uploaded audio is the first-class path.
+Voice is never required. Uploaded audio is the first-class path. All visuals are
+drawn procedurally by three.js in a headless browser; no image model is used.
 """
 
 from __future__ import annotations
@@ -34,6 +38,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import audio_ops  # noqa: E402
+import visual_ops  # noqa: E402
 
 AUDIO_RATE = 48000
 AUDIO_EXT = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma", ".aiff", ".aif"}
@@ -47,7 +52,7 @@ class PipelineError(RuntimeError):
 
 STYLES: dict[str, dict] = {
     "warm-flat": {
-        "label": "Warm Flat — illustrated storybook, cinematic dusk",
+        "label": "Warm Flat — drawn storybook dusk, one amber practical",
         "palette": {
             "background": "#1B1418",
             "wall": "#6B5852",
@@ -59,34 +64,17 @@ STYLES: dict[str, dict] = {
             "sage": "#7C9270",
             "red": "#D6402F",
         },
-        "grade": {"saturation": 1.04, "contrast": 1.05, "gamma": 0.99, "grain": 5, "vignette": 0.55},
-        "style_lock": (
-            "STYLE LOCK — WARM FLAT. Flat vector storybook illustration, 16:9, cinematic dusk lighting, "
-            "large simple shapes with clean edges, matte finish, no photographic texture, one dominant warm "
-            "light source with soft bloom, deep plum shadows, subtle film grain, a few floating dust motes, "
-            "gentle vignette, generous negative space, lower 22 percent kept dark and uncluttered for captions. "
-            "Palette: sky peach #F6D8A6, sun glow #FFEDBE, wall #6B5852, shadow #3A2E30, deep plum #241C22, "
-            "garment #E05F38, accent gold #E3A94E, sage #7C9270. "
-            "No text, no letters, no numbers, no logo, no watermark."
-        ),
-        "character": (
-            "CHARACTER BLOCK — A friendly stylised cartoon figure. Circular head in deep charcoal-plum (#241C22), "
-            "about one third of total body height. Two large white almond eyes with small dark pupils, one wide "
-            "simple curved smile, no nose, no ears, no visible neck. Rounded trapezoid torso in a saturated "
-            "garment colour with a visible sleeve seam, tapered capsule arms and legs with rounded ends, small "
-            "circular hands, simple rounded shoes. Flat fills with two-tone shading, no outline stroke, no "
-            "gradient on the face, no facial detail beyond eyes and mouth. Limbs are drawn as filled tapered "
-            "shapes, never as single thin sticks."
-        ),
-        "negative": (
-            "NEGATIVE — photorealistic, 3D render, stick figure, stickman, single-line limbs, wire limbs, "
-            "empty flat background, floating unrelated shapes, text, letters, numbers, watermark, logo, "
-            "signature, extra limbs, malformed hands, gore, blood, deformed face, blurry, low contrast, "
-            "oversaturated, jpeg artifacts."
+        "grade": {
+            "saturation": 1.06, "contrast": 1.06, "brightness": 1.06,
+            "grain": 5, "vignette": 0.45,
+        },
+        "look": (
+            "Warm dusk interior. Pale skinned character, saturated garment, deep plum shadows, "
+            "one amber practical light, soft haze, fine grain."
         ),
     },
     "noir-line": {
-        "label": "Noir Line — monochrome analog-horror line art",
+        "label": "Noir Line — near black rooms, cold key, amber practical",
         "palette": {
             "background": "#050506",
             "wall": "#1A1C1D",
@@ -98,23 +86,13 @@ STYLES: dict[str, dict] = {
             "sage": "#5B6160",
             "red": "#BE2D28",
         },
-        "grade": {"saturation": 0.92, "contrast": 1.08, "gamma": 1.0, "grain": 6, "vignette": 0.62},
-        "style_lock": (
-            "STYLE LOCK — NOIR LINE. Original minimalist 2D line animation, 16:9, matte near-black background, "
-            "thin ivory-white contour lines of even weight, flat charcoal-grey fills, simple rounded characters "
-            "with restrained expressions, one muted amber practical light casting a soft wedge, sparse domestic "
-            "geometry, eerie negative space, restrained analog-horror mood, clean silhouettes, subtle texture, "
-            "lower 22 percent dark and uncluttered for captions. "
-            "No text, no letters, no numbers, no logo, no watermark."
-        ),
-        "character": (
-            "CHARACTER BLOCK — A simple rounded figure built from filled shapes: egg-shaped head with a thin "
-            "ivory contour, two dot eyes with small pupils, minimal brow, narrow torso, tapered limbs with "
-            "rounded caps, no rendered fingers. Proportions stay consistent between shots."
-        ),
-        "negative": (
-            "NEGATIVE — photorealistic, colour, 3D render, stick figure, thin wire limbs, text, letters, "
-            "numbers, watermark, logo, gore, deformed face, blurry, cluttered composition."
+        "grade": {
+            "saturation": 0.92, "contrast": 1.08, "brightness": 0.98,
+            "grain": 6, "vignette": 0.62,
+        },
+        "look": (
+            "Analog horror monochrome. Almost no colour, cold key light, one amber source, "
+            "heavy shadow, coarse grain."
         ),
     },
 }
@@ -239,6 +217,62 @@ def beat_label(beat: dict, index: int) -> str:
 # ---------------------------------------------------------------- init
 
 
+def scene_guide(style: dict) -> str:
+    import visual_ops
+
+    lines = [
+        f"LOOK — {style['label']}",
+        style["look"],
+        "",
+        "Every beat carries a scene block. Nothing is generated as an image; the renderer",
+        "builds the room from code, so a scene costs nothing and can be changed as often as",
+        "you like.",
+        "",
+        "PLACES",
+        "  " + ", ".join(visual_ops.PLACES),
+        "",
+        "SHOTS",
+        "  " + ", ".join(visual_ops.SHOTS),
+        "",
+        "CAMERA MOVES",
+        "  " + ", ".join(visual_ops.MOVES),
+        "",
+        "POSES",
+        "  " + ", ".join(visual_ops.POSES),
+        "",
+        "EXPRESSIONS",
+        "  " + ", ".join(visual_ops.EXPRESSIONS),
+        "",
+        "ITEMS FOR THE object PLACE",
+        "  " + ", ".join(visual_ops.ITEMS),
+        "",
+        "EXAMPLE BEAT",
+        json.dumps(
+            {
+                "id": "b07",
+                "section": "RULE TWO",
+                "narration": "The hallway light came on by itself. Do not look at the door.",
+                "caption": "Do not look at the door.",
+                "emphasis": ["door"],
+                "scene": {
+                    "place": "hallway",
+                    "seed": 7,
+                    "camera": {"shot": "medium", "move": "push", "amount": 0.24, "handheld": 0.2},
+                    "figure": {"pose": "stand", "x": 0.0, "z": -3.2, "facing": 0, "expression": "absent"},
+                    "light": {"flicker": 0.08},
+                    "atmosphere": {"fog": 0.035},
+                },
+            },
+            indent=2,
+        ),
+        "",
+        "Character defaults: pale skin, saturated garment, dark eyes. Keep the same garment",
+        "colour and the same seed family for a whole episode so the figure reads as one person.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def command_init(args) -> int:
     root = Path(args.project).expanduser().resolve()
     project_file = root / "project.json"
@@ -246,13 +280,13 @@ def command_init(args) -> int:
         raise PipelineError(f"Refusing to overwrite existing {project_file}")
 
     for directory in (
-        "assets/images",
         "assets/audio",
         "assets/music",
         "assets/sfx",
-        "assets/character",
         "render/beats",
-        "render/overlays",
+        "render/clips",
+        "render/streams",
+        "render/stills",
         "render/qc",
     ):
         (root / directory).mkdir(parents=True, exist_ok=True)
@@ -288,7 +322,6 @@ def command_init(args) -> int:
             },
             "grade": dict(style["grade"]),
             "transition": {"section": 0.45, "beat": 0.0},
-            "clean_edges": {"top": 0.0, "bottom": 0.0, "left": 0.0, "right": 0.0},
             "tail_padding": 0.16,
             "music": "",
             "music_volume": 0.07,
@@ -313,15 +346,12 @@ def command_init(args) -> int:
     catalog_source = Path(__file__).resolve().parent.parent / "assets" / "sfx-catalog.json"
     if catalog_source.is_file():
         shutil.copyfile(catalog_source, root / "assets" / "sfx" / "catalog.json")
-    (root / "style-lock.txt").write_text(
-        "\n\n".join([style["style_lock"], style["character"], style["negative"]]) + "\n",
-        encoding="utf-8",
-    )
+    (root / "scene-guide.txt").write_text(scene_guide(style), encoding="utf-8")
     print(f"CREATED: {project_file}")
     print(f"STYLE:   {style['label']}")
-    print(f"LOCKS:   {root / 'style-lock.txt'}  (paste into every image generation)")
+    print(f"GUIDE:   {root / 'scene-guide.txt'}  (locations and beat fields)")
     print(f"PALETTE: {root / 'palette.json'}")
-    print("Next: add beats, import narration with `audio`, then `render`.")
+    print("Next: add beats with a `scene` block, import narration with `audio`, then `render`.")
     return 0
 
 
@@ -715,18 +745,29 @@ def validate_project(root: Path, data: dict, check_assets=False):
             errors.append(f"{label}: missing narration")
         if not str(beat.get("section", "")).strip():
             errors.append(f"{label}: missing section")
-        if not str(beat.get("image", "")).strip():
-            errors.append(f"{label}: missing image")
+        scene = beat.get("scene")
+        if not scene:
+            errors.append(f"{label}: missing scene block")
+        else:
+            place = str((scene.get("place") if isinstance(scene, dict) else scene) or "").lower()
+            if place not in visual_ops.PLACES:
+                errors.append(f"{label}: unknown place '{place}'")
+            if isinstance(scene, dict):
+                camera = scene.get("camera") or {}
+                move = str(camera.get("move") or beat.get("camera") or "static").lower()
+                move = visual_ops.CAMERA_ALIASES.get(move, move)
+                if move not in visual_ops.MOVES:
+                    errors.append(f"{label}: unknown camera move '{move}'")
+                figure = scene.get("figure")
+                if isinstance(figure, dict):
+                    pose = str(figure.get("pose") or "stand").lower()
+                    expression = str(figure.get("expression") or "neutral").lower()
+                    if pose not in visual_ops.POSES:
+                        errors.append(f"{label}: unknown pose '{pose}'")
+                    if expression not in visual_ops.EXPRESSIONS:
+                        errors.append(f"{label}: unknown expression '{expression}'")
         if not str(beat.get("audio", "")).strip():
             errors.append(f"{label}: missing audio")
-        if beat.get("camera", "static") not in {
-            "static",
-            "push-in",
-            "pull-back",
-            "drift-left",
-            "drift-right",
-        }:
-            errors.append(f"{label}: unsupported camera move")
         narration_words = len(words(narration))
         total_words += narration_words
         if narration_words > 34:
@@ -736,7 +777,7 @@ def validate_project(root: Path, data: dict, check_assets=False):
         if index == 1 and narration_words > 38:
             warnings.append("Opening beat is long; deliver the title premise faster")
         if check_assets:
-            for field in ("image", "audio", "sfx"):
+            for field in ("audio", "sfx"):
                 value = beat.get(field)
                 if not value:
                     continue
@@ -791,16 +832,21 @@ def command_timeline(args) -> int:
     root, data = load_project(args.project)
     ffmpeg = ffmpeg_executable()
     beats = data["beats"]
-    print(f"{'#':<4}{'id':<18}{'section':<14}{'dur':>6}{'words':>7}{'wpm':>6}  image")
+    print(f"{'#':<4}{'id':<18}{'section':<14}{'dur':>6}{'words':>7}{'wpm':>6}  scene / shot")
     print("-" * 78)
     cursor = 0.0
     for index, beat in enumerate(beats, start=1):
         duration = beat_duration(ffmpeg, root, beat, data.get("settings", {}) or {})
         count = len(words(beat.get("narration", "")))
         wpm = count / duration * 60 if duration else 0
+        scene = beat.get("scene") or {}
+        if isinstance(scene, str):
+            scene = {"place": scene}
+        place = str(scene.get("place", "") or "")
+        shot = str((scene.get("camera") or {}).get("shot", "") or "")
         print(
             f"{index:<4}{str(beat.get('id',''))[:17]:<18}{str(beat.get('section',''))[:13]:<14}"
-            f"{duration:>6.2f}{count:>7}{wpm:>6.0f}  {Path(str(beat.get('image',''))).name}"
+            f"{duration:>6.2f}{count:>7}{wpm:>6.0f}  {place} / {shot}"
         )
         cursor += duration
     print("-" * 78)
@@ -1003,327 +1049,76 @@ def command_sfx(args) -> int:
 # ---------------------------------------------------------------- overlays
 
 
-def font_path(settings: dict) -> str | None:
-    candidates = [
-        setting(settings, "font", ""),
-        "C:/Windows/Fonts/segoeuib.ttf",
-        "C:/Windows/Fonts/arialbd.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
-    ]
-    for candidate in candidates:
-        if candidate and Path(candidate).is_file():
-            return str(candidate)
-    return None
-
-
-def load_font(settings: dict, size: int):
-    from PIL import ImageFont
-
-    path = font_path(settings)
-    if path:
-        return ImageFont.truetype(path, size=size)
-    try:
-        return ImageFont.truetype("DejaVuSans-Bold.ttf", size=size)
-    except OSError as exc:
-        raise PipelineError("No usable bold font found; set settings.font") from exc
-
-
-def wrap_words(draw, text: str, font, max_width: float) -> list[str]:
-    lines: list[str] = []
-    for source_line in str(text).splitlines() or [""]:
-        current = ""
-        for word in source_line.split():
-            candidate = f"{current} {word}".strip()
-            if current and draw.textlength(candidate, font=font) > max_width:
-                lines.append(current)
-                current = word
-            else:
-                current = candidate
-        lines.append(current)
-    return lines
-
-
-def fit_text(draw, text: str, settings: dict, width: int, start: int, max_lines: int, ratio: float = 0.84):
-    size = start
-    while size >= 22:
-        font = load_font(settings, size)
-        lines = wrap_words(draw, text, font, width * ratio)
-        if len(lines) <= max_lines:
-            return font, lines
-        size -= 2
-    font = load_font(settings, 22)
-    return font, wrap_words(draw, text, font, width * ratio)
-
-
-def draw_line_emphasis(draw, line: str, font, x: float, y: float, base, accent, emphasis: set[str]):
-    """Draw one caption line word by word so key words can take the accent colour."""
-    space = draw.textlength(" ", font=font)
-    cursor = x
-    for word in line.split():
-        colour = accent if re.sub(r"[^\w']", "", word.lower()) in emphasis else base
-        draw.text((cursor, y), word, font=font, fill=colour)
-        cursor += draw.textlength(word, font=font) + space
-
-
-def palette_for(data: dict) -> dict:
-    settings = data.get("settings", {}) or {}
-    key = str(data.get("style") or setting(settings, "style", DEFAULT_STYLE))
-    return STYLES.get(key, STYLES[DEFAULT_STYLE])["palette"]
-
-
-def rgba(hex_value: str, alpha: int = 255) -> tuple[int, int, int, int]:
-    hex_value = hex_value.lstrip("#")
-    return (
-        int(hex_value[0:2], 16),
-        int(hex_value[2:4], 16),
-        int(hex_value[4:6], 16),
-        alpha,
-    )
-
-
-def create_overlay(root: Path, data: dict, beat: dict, path: Path, width: int, height: int, start_seconds: float):
-    from PIL import Image, ImageDraw, ImageFilter
-
-    settings = data.get("settings", {}) or {}
-    palette = palette_for(data)
-    colours = {
-        "ivory": rgba(palette["ivory"]),
-        "amber": rgba(palette["amber"]),
-        "red": rgba(palette["red"]),
-    }
-    accent = colours.get(str(beat.get("accent", "ivory")).lower(), colours["ivory"])
-    image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    scale = height / 1080
-
-    if setting(settings, "caption.band", True):
-        band_top = int(height * 0.70)
-        steps = 48
-        for step in range(steps):
-            alpha = int(150 * (step / steps) ** 1.4)
-            y0 = band_top + int((height - band_top) * step / steps)
-            y1 = band_top + int((height - band_top) * (step + 1) / steps)
-            draw.rectangle((0, y0, width, y1), fill=(4, 4, 5, alpha))
-
-    hud_font = load_font(settings, max(14, round(21 * scale)))
-    brand = str(setting(settings, "brand", "") or "").strip()
-    episode = str(setting(settings, "episode", "") or "").strip()
-    section = str(beat.get("section", "")).strip()
-    hud = "  •  ".join(part for part in (brand, episode, section) if part)
-    if hud:
-        draw.text((width * 0.035, height * 0.045), hud[:90], font=hud_font, fill=(206, 202, 194, 210))
-    timecode = f"{int(start_seconds // 60):02d}:{int(start_seconds % 60):02d}"
-    time_width = draw.textlength(timecode, font=hud_font)
-    right = width * 0.965
-    draw.text((right - time_width, height * 0.045), timecode, font=hud_font, fill=(206, 202, 194, 210))
-    dot_x = right - time_width - 24 * scale
-    draw.ellipse(
-        (dot_x, height * 0.045 + 9 * scale, dot_x + 9 * scale, height * 0.045 + 18 * scale),
-        fill=colours["red"],
-    )
-
-    overlay = str(beat.get("overlay", "") or "").strip()
-    if overlay:
-        overlay_font, overlay_lines = fit_text(
-            draw, overlay, settings, width, round(84 * scale), 4, ratio=0.80
-        )
-        line_height = overlay_font.getbbox("Ag")[3] - overlay_font.getbbox("Ag")[1]
-        top = height * 0.26
-        widest = max(draw.textlength(line, font=overlay_font) for line in overlay_lines)
-        block_h = len(overlay_lines) * (line_height + 14 * scale)
-        pad = 40 * scale
-
-        # Full-width feathered band instead of a box: no vertical edges can ever
-        # show, so the card sits in the image rather than on top of it.
-        band_top = max(0.0, top - block_h * 0.55)
-        band_bottom = min(float(height), top + block_h + block_h * 0.45)
-        steps = 56
-        for step in range(steps):
-            u = (step + 0.5) / steps
-            alpha = int(205 * (math.sin(math.pi * u) ** 0.65))
-            y0 = int(band_top + (band_bottom - band_top) * step / steps)
-            y1 = int(band_top + (band_bottom - band_top) * (step + 1) / steps) + 1
-            draw.rectangle((0, y0, width, y1), fill=(4, 4, 6, alpha))
-
-        if str(beat.get("overlay_style", "")).lower() == "card":
-            # Typographic rules above and below the block; no rectangle to fight the art.
-            left, right = (width - widest) / 2, (width + widest) / 2
-            draw.line((left, top - 24 * scale, right, top - 24 * scale),
-                      fill=accent, width=max(1, round(2 * scale)))
-            draw.line((left, top + block_h + 12 * scale, right, top + block_h + 12 * scale),
-                      fill=accent, width=max(1, round(2 * scale)))
-        for index, line in enumerate(overlay_lines):
-            line_width = draw.textlength(line, font=overlay_font)
-            draw.text(
-                ((width - line_width) / 2, top + index * (line_height + 14 * scale)),
-                line,
-                font=overlay_font,
-                fill=accent,
-                stroke_width=max(1, round(2 * scale)),
-                stroke_fill=(0, 0, 0, 160),
-            )
-
-    caption = str(beat.get("caption", "") or beat.get("narration", "")).strip()
-    if setting(settings, "caption.uppercase", True):
-        caption = caption.upper()
-    if caption:
-        caption_font, caption_lines = fit_text(
-            draw, caption, settings, width, round(50 * scale), 2, ratio=0.82
-        )
-        line_height = caption_font.getbbox("Ag")[3] - caption_font.getbbox("Ag")[1]
-        spacing = 12 * scale
-        total_height = len(caption_lines) * line_height + (len(caption_lines) - 1) * spacing
-        position = float(setting(settings, "caption.position", 0.88))
-        top = height * position - total_height
-        emphasis = {
-            re.sub(r"[^\w']", "", str(word).lower()) for word in (beat.get("emphasis") or [])
-        }
-        for index, line in enumerate(caption_lines):
-            line_width = draw.textlength(line, font=caption_font)
-            y = top + index * (line_height + spacing)
-            if emphasis:
-                draw_line_emphasis(
-                    draw, line, caption_font, (width - line_width) / 2, y,
-                    colours["ivory"], accent, emphasis,
-                )
-            else:
-                draw.text(
-                    ((width - line_width) / 2, y),
-                    line,
-                    font=caption_font,
-                    fill=colours["ivory"],
-                    stroke_width=max(1, round(2 * scale)),
-                    stroke_fill=(0, 0, 0, 200),
-                )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    image.save(path)
-
-
 # ---------------------------------------------------------------- render
 
 
-def prepare_plate(root: Path, image_path: Path, settings: dict, width: int, height: int, cache_dir: Path) -> Path:
-    """Bake clean-edge crop, grade, vignette and grain into one oversized plate.
-
-    Doing this in the encoder cost more than twice the render time on a 4-core
-    machine, because grain is expensive to encode. Baked once per unique plate it
-    is nearly free, and every beat then reuses the same look.
-    """
-    from PIL import Image, ImageEnhance, ImageOps
-
-    clean = setting(settings, "clean_edges", {}) or {}
-    grade = {
-        "saturation": float(setting(settings, "grade.saturation", 1.04)),
-        "contrast": float(setting(settings, "grade.contrast", 1.05)),
-        "gamma": float(setting(settings, "grade.gamma", 0.99)),
-        "grain": int(setting(settings, "grade.grain", 5) or 0),
-        "vignette": float(setting(settings, "grade.vignette", 0.55) or 0),
-    }
-    payload = {
-        "image": [image_path.as_posix(), image_path.stat().st_size, image_path.stat().st_mtime_ns],
-        "clean": clean,
-        "grade": grade,
-        "size": [width, height],
-    }
-    key = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:16]
-    target = cache_dir / f"{key}.png"
-    if target.is_file() and target.stat().st_size > 0:
-        return target
-
-    image = Image.open(image_path).convert("RGB")
-    source_w, source_h = image.size
-    left = float(clean.get("left", 0) or 0)
-    right = float(clean.get("right", 0) or 0)
-    top = float(clean.get("top", 0) or 0)
-    bottom = float(clean.get("bottom", 0) or 0)
-    if left or right or top or bottom:
-        box = (
-            int(source_w * left),
-            int(source_h * top),
-            int(source_w * (1 - right)),
-            int(source_h * (1 - bottom)),
-        )
-        if box[2] - box[0] > 16 and box[3] - box[1] > 16:
-            image = image.crop(box)
-
-    headroom = 1.15  # extra pixels so camera moves never upscale
-    image = ImageOps.fit(
-        image,
-        (round(width * headroom), round(height * headroom)),
-        method=Image.LANCZOS,
-        centering=(0.5, 0.45),
-    )
-    if abs(grade["saturation"] - 1.0) > 0.001:
-        image = ImageEnhance.Color(image).enhance(grade["saturation"])
-    if abs(grade["contrast"] - 1.0) > 0.001:
-        image = ImageEnhance.Contrast(image).enhance(grade["contrast"])
-
-    array = np.asarray(image).astype(np.float32) / 255.0
-    if abs(grade["gamma"] - 1.0) > 0.001:
-        array = np.power(np.clip(array, 0.0, 1.0), grade["gamma"])
-
-    plate_h, plate_w = array.shape[:2]
-    if grade["vignette"] > 0:
-        strength = min(0.72, grade["vignette"] * 0.62)
-        yy, xx = np.mgrid[0:plate_h, 0:plate_w].astype(np.float32)
-        cx, cy = plate_w / 2.0, plate_h / 2.0
-        radius = np.sqrt(((xx - cx) / cx) ** 2 + ((yy - cy) / cy) ** 2) / 1.4142
-        mask = np.clip(1.0 - strength * np.power(radius, 2.1), 0.0, 1.0)[..., None]
-        array = array * mask
-
-    if grade["grain"] > 0:
-        rng = np.random.default_rng(11)
-        amplitude = grade["grain"] * 0.0038
-        array = array + rng.normal(0.0, amplitude, array.shape).astype(np.float32)
-
-    result = Image.fromarray(np.clip(array * 255.0, 0, 255).astype(np.uint8), "RGB")
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    result.save(target, optimize=False)
-    return target
-
-
-def camera_filter(camera: str, width: int, height: int, fps: int, frames: int) -> str:
-    center_x = "iw/2-(iw/zoom/2)"
-    center_y = "ih/2-(ih/zoom/2)"
-    zoom = "1.0"
-    x = center_x
-    y = center_y
-    span = max(frames, 1)
-    if camera == "push-in":
-        zoom = f"min(1.0+on*0.10/{span},1.10)"
-    elif camera == "pull-back":
-        zoom = f"max(1.10-on*0.10/{span},1.0)"
-    elif camera == "drift-left":
-        zoom = "1.12"
-        x = f"(iw-iw/zoom)*on/{span}"
-    elif camera == "drift-right":
-        zoom = "1.12"
-        x = f"(iw-iw/zoom)*(1-on/{span})"
-    return f"zoompan=z='{zoom}':x='{x}':y='{y}':d=1:s={width}x{height}:fps={fps}"
-
-
-def beat_signature(data: dict, beat: dict, image: Path, audio: Path, width: int, height: int) -> str:
-    settings = data.get("settings", {}) or {}
-    relevant = {
-        key: setting(settings, key)
-        for key in (
-            "fps", "font", "brand", "episode", "caption", "grade",
-            "transition", "tail_padding", "clean_edges",
-        )
-    }
+def mux_signature(beat: dict, clip: Path, audio: Path, fades: tuple[float, float]) -> str:
     payload = {
         "beat": beat,
-        "settings": relevant,
-        "style": data.get("style"),
-        "width": width,
-        "height": height,
-        "image": [image.stat().st_size, image.stat().st_mtime_ns],
+        "clip": [clip.stat().st_size, clip.stat().st_mtime_ns],
         "audio": [audio.stat().st_size, audio.stat().st_mtime_ns],
+        "fades": [round(fades[0], 3), round(fades[1], 3)],
     }
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
     ).hexdigest()
+
+
+def mux_beat(
+    ffmpeg: str,
+    clip: Path,
+    audio_path: Path,
+    sfx_file: Path | None,
+    gain: float,
+    duration: float,
+    output: Path,
+    fades: tuple[float, float],
+) -> None:
+    """Marry one rendered scene clip to its narration and effect.
+
+    The clip is already H.264 from the browser, so this is a stream copy unless a
+    fade is needed. Fades force one re-encode, which is the only place the pipeline
+    touches pixels after the renderer is done.
+    """
+    fade_in, fade_out = fades
+    video_filters = []
+    if fade_in > 0:
+        video_filters.append(f"fade=t=in:st=0:d={fade_in:.3f}")
+    if fade_out > 0:
+        video_filters.append(f"fade=t=out:st={max(0.0, duration - fade_out):.3f}:d={fade_out:.3f}")
+
+    inputs = ["-i", str(clip), "-i", str(audio_path)]
+    audio_parts = [
+        f"[1:a]afade=t=in:st=0:d=0.03,"
+        f"afade=t=out:st={max(0.0, duration - 0.08):.3f}:d=0.08,"
+        f"apad=pad_dur={duration:.3f},atrim=0:{duration:.3f}[na]"
+    ]
+    if sfx_file and sfx_file.is_file():
+        inputs += ["-i", str(sfx_file)]
+        audio_parts.append(f"[2:a]volume={gain:.3f},apad=pad_dur={duration:.3f}[fx]")
+        audio_parts.append("[na][fx]amix=inputs=2:duration=first:normalize=0[a]")
+    else:
+        audio_parts.append("[na]anull[a]")
+
+    filters = audio_parts
+    if video_filters:
+        filters = [f"[0:v]{','.join(video_filters)}[v]"] + audio_parts
+        map_video = "[v]"
+        codec = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p"]
+    else:
+        map_video = "0:v:0"
+        codec = ["-c:v", "copy"]
+
+    command = [
+        ffmpeg, "-y", "-hide_banner", "-loglevel", "error", *inputs,
+        "-filter_complex", ";".join(filters),
+        "-map", map_video, "-map", "[a]",
+        "-t", f"{duration:.3f}",
+        *codec,
+        "-c:a", "aac", "-b:a", "192k", "-ar", str(AUDIO_RATE), "-ac", "2",
+        output,
+    ]
+    run(command, capture=True)
 
 
 def srt_timestamp(seconds: float) -> str:
@@ -1360,129 +1155,6 @@ def write_timed_documents(root: Path, beats: list[dict], durations: list[float])
     (root / "chapters.txt").write_text("\n".join(chapters) + "\n", encoding="utf-8")
 
 
-def composite_static(plate: Path, overlay: Path, width: int, height: int, target: Path) -> None:
-    """Flatten plate and overlay into one frame for beats that do not move.
-
-    A static beat has no reason to composite two full-resolution layers per frame;
-    doing it once in PIL and encoding a still is several times faster.
-    """
-    from PIL import Image
-
-    base = Image.open(plate).convert("RGBA")
-    # match zoompan at zoom 1.0 exactly: the whole plate, scaled to frame
-    if base.size != (width, height):
-        base = base.resize((width, height), Image.LANCZOS)
-    layer = Image.open(overlay).convert("RGBA")
-    base.alpha_composite(layer)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    base.convert("RGB").save(target)
-
-
-def render_beat(
-    ffmpeg: str,
-    root: Path,
-    data: dict,
-    beat: dict,
-    duration: float,
-    width: int,
-    height: int,
-    fps: int,
-    start_seconds: float,
-    output: Path,
-    overlay_dir: Path,
-    fades: tuple[float, float],
-):
-    settings = data.get("settings", {}) or {}
-    image_path = asset_path(root, beat["image"])
-    audio_path = asset_path(root, beat["audio"])
-    overlay = overlay_dir / f"{beat['id']}.png"
-    create_overlay(root, data, beat, overlay, width, height, start_seconds)
-    plate = prepare_plate(
-        root, image_path, settings, width, height, root / "render" / "plates"
-    )
-
-    frames = max(1, round(duration * fps))
-    camera = str(beat.get("camera", "static"))
-    fade_in, fade_out = fades
-    fade_chain = []
-    if fade_in > 0:
-        fade_chain.append(f"fade=t=in:st=0:d={fade_in:.3f}")
-    if fade_out > 0:
-        fade_chain.append(f"fade=t=out:st={max(0.0, duration - fade_out):.3f}:d={fade_out:.3f}")
-    tail = ("," + ",".join(fade_chain)) if fade_chain else ""
-
-    if camera == "static":
-        frame = root / "render" / "frames" / f"{beat['id']}.png"
-        composite_static(plate, overlay, width, height, frame)
-        video_parts = [f"[0:v]fps={fps}{tail},format=yuv420p[v]"]
-        inputs = [
-            "-loop", "1", "-framerate", "1", "-t", f"{duration:.3f}", "-i", str(frame),
-            "-i", str(audio_path),
-        ]
-        audio_index = 1
-    else:
-        motion = camera_filter(camera, width, height, fps, frames)
-        video_parts = [
-            f"[0:v]loop=loop=-1:size=1:start=0,fps={fps},{motion}[bg]",
-            f"[1:v]loop=loop=-1:size=1:start=0,fps={fps},format=rgba[ov]",
-            f"[bg][ov]overlay=0:0:format=auto{tail},format=yuv420p[v]",
-        ]
-        inputs = ["-i", str(plate), "-i", str(overlay), "-i", str(audio_path)]
-        audio_index = 2
-
-    audio_parts = [
-        f"[{audio_index}:a]afade=t=in:st=0:d=0.03,"
-        f"afade=t=out:st={max(0.0, duration - 0.08):.3f}:d=0.08,"
-        f"apad=pad_dur={duration:.3f},atrim=0:{duration:.3f}[na]"
-    ]
-    sfx = str(beat.get("sfx", "") or "").strip()
-    sfx_file = resolve_sfx(root, settings, sfx) if sfx else Path("")
-    if sfx and sfx_file.is_file():
-        inputs.extend(["-i", str(sfx_file)])
-        gain = float(beat.get("sfx_gain", 0.5))
-        audio_parts.append(f"[{audio_index + 1}:a]volume={gain:.3f},apad=pad_dur={duration:.3f}[fx]")
-        audio_parts.append("[na][fx]amix=inputs=2:duration=first:normalize=0[a]")
-    else:
-        audio_parts.append("[na]anull[a]")
-
-    command = [
-        ffmpeg,
-        "-y",
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        *inputs,
-        "-filter_complex",
-        ";".join(video_parts + audio_parts),
-        "-map",
-        "[v]",
-        "-map",
-        "[a]",
-        "-t",
-        f"{duration:.3f}",
-        "-r",
-        str(fps),
-        "-c:v",
-        "libx264",
-        "-preset",
-        "veryfast",
-        "-crf",
-        "19",
-        "-pix_fmt",
-        "yuv420p",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "192k",
-        "-ar",
-        str(AUDIO_RATE),
-        "-ac",
-        "2",
-        output,
-    ]
-    run(command, capture=True)
-
-
 def command_render(args) -> int:
     root, data = load_project(args.project)
     errors, warnings, _, _ = validate_project(root, data, check_assets=True)
@@ -1502,28 +1174,39 @@ def command_render(args) -> int:
     width = 960 if preview else int(setting(settings, "width", 1920))
     height = 540 if preview else int(setting(settings, "height", 1080))
     fps = int(setting(settings, "fps", 30))
-    tail = max(0.0, float(setting(settings, "tail_padding", 0.16)))
     section_fade = float(setting(settings, "transition.section", 0.45))
     stem = "preview" if preview else "final"
     beat_dir = root / "render" / "beats" / stem
-    overlay_dir = root / "render" / "overlays" / stem
     beat_dir.mkdir(parents=True, exist_ok=True)
-    overlay_dir.mkdir(parents=True, exist_ok=True)
+
+    durations = [beat_duration(ffmpeg, root, beat, settings) for beat in beats]
+    print(f"Scenes: {len(beats)} beats at {width}x{height} {fps}fps")
+    clips = visual_ops.render_clips(
+        root, data, ffmpeg, durations, width, height, fps,
+        beats=beats, force=args.force, label=stem,
+    )
 
     outputs: list[Path] = []
-    durations: list[float] = []
     cursor = 0.0
     sections = [str(beat.get("section", "")).strip() for beat in beats]
-    for index, beat in enumerate(beats, start=1):
+    for index, (beat, duration) in enumerate(zip(beats, durations), start=1):
         beat_id = beat["id"]
         started = time.perf_counter()
+        clip = clips[beat_id]
         audio_path = asset_path(root, beat["audio"])
-        duration = beat_duration(ffmpeg, root, beat, settings)
         output = beat_dir / f"{beat_id}.mp4"
         signature_file = beat_dir / f"{beat_id}.json"
-        signature = beat_signature(
-            data, beat, asset_path(root, beat["image"]), audio_path, width, height
-        )
+
+        opens_section = index == 1 or sections[index - 1] != sections[index - 2]
+        closes_section = index == len(beats) or sections[index - 1] != sections[index]
+        fade_in = section_fade if (opens_section and section_fade > 0) else 0.0
+        fade_out = section_fade if (closes_section and section_fade > 0) else 0.0
+        if index == 1:
+            fade_in = max(fade_in, 0.8)
+        if index == len(beats):
+            fade_out = max(fade_out, 1.2)
+
+        signature = mux_signature(beat, clip, audio_path, (fade_in, fade_out))
         fresh = (
             not args.force
             and output.is_file()
@@ -1531,25 +1214,18 @@ def command_render(args) -> int:
             and signature_file.read_text(encoding="utf-8") == signature
         )
         if not fresh:
-            opens_section = index == 1 or sections[index - 1] != sections[index - 2]
-            closes_section = index == len(beats) or sections[index - 1] != sections[index]
-            fade_in = section_fade if (opens_section and section_fade > 0) else 0.0
-            fade_out = section_fade if (closes_section and section_fade > 0) else 0.0
-            if index == 1:
-                fade_in = max(fade_in, 0.8)
-            if index == len(beats):
-                fade_out = max(fade_out, 1.2)
-            render_beat(
-                ffmpeg, root, data, beat, duration, width, height, fps, cursor,
-                output, overlay_dir, (fade_in, fade_out),
+            sfx = str(beat.get("sfx", "") or "").strip()
+            sfx_file = resolve_sfx(root, settings, sfx) if sfx else None
+            mux_beat(
+                ffmpeg, clip, audio_path, sfx_file, float(beat.get("sfx_gain", 0.5)),
+                duration, output, (fade_in, fade_out),
             )
             signature_file.write_text(signature, encoding="utf-8")
         outputs.append(output)
-        durations.append(duration)
         cursor += duration
         if index % 10 == 0 or index == len(beats) or index == 1:
             elapsed = time.perf_counter() - started
-            print(f"Render progress: {index}/{len(beats)} beats  (last {elapsed:.1f}s)")
+            print(f"Assembly: {index}/{len(beats)} beats  (last {elapsed:.1f}s)")
 
     concat_file = root / "render" / f"{stem}-concat.txt"
     concat_file.write_text(
@@ -1646,6 +1322,36 @@ def command_render(args) -> int:
 # ---------------------------------------------------------------- qc
 
 
+def command_stills(args) -> int:
+    """One PNG per beat, full size, for looking at the art before committing to a render."""
+    root, data = load_project(args.project)
+    settings = data.get("settings", {}) or {}
+    beats = data["beats"][: args.beats] if args.beats else data["beats"]
+    if not beats:
+        raise PipelineError("No beats to preview")
+    # Stills are the cheap look-before-you-render step, so they must work before
+    # FFmpeg is installed. Fall back to a words-per-minute estimate for duration.
+    try:
+        ffmpeg = ffmpeg_executable()
+    except PipelineError:
+        ffmpeg = ""
+        print("FFmpeg missing: using an estimated beat length for the stills.")
+    durations = [
+        beat_duration(ffmpeg, root, beat, settings) if ffmpeg
+        else max(1.2, len(words(beat.get("narration", ""))) / 150 * 60)
+        for beat in beats
+    ]
+    target = root / "render" / "stills"
+    print(f"Stills: {len(beats)} beats at {args.width}x{args.height}")
+    paths = visual_ops.render_stills(
+        root, data, beats, durations, args.width, args.height,
+        int(setting(settings, "fps", 30)), target,
+    )
+    for path in paths:
+        print(f"STILL: {path}")
+    return 0
+
+
 def command_qc(args) -> int:
     root, _data = load_project(args.project)
     ffmpeg = ffmpeg_executable()
@@ -1654,6 +1360,9 @@ def command_qc(args) -> int:
         raise PipelineError(f"Missing rendered file: {video}")
     qc_dir = root / "render" / "qc"
     qc_dir.mkdir(parents=True, exist_ok=True)
+    # Old frames from a previous cut would be read as if they came from this one.
+    for stale in qc_dir.glob("frame-*.png"):
+        stale.unlink(missing_ok=True)
     duration = media_duration(ffmpeg, video)
     print(f"File: {video.name}  {duration:.2f} s  {video.stat().st_size/1e6:.1f} MB")
 
@@ -1731,7 +1440,7 @@ def command_doctor(args) -> int:
         first = (result.stdout or "").splitlines()[0] if result.stdout else "ffmpeg"
         print(f"FFmpeg      {first[:70]}")
         print(f"            {ffmpeg}")
-        needed = ["zoompan", "xfade", "sidechaincompress", "loudnorm", "alimiter", "vignette", "noise"]
+        needed = ["sidechaincompress", "loudnorm", "alimiter", "amix", "afade"]
         listed = subprocess.run(
             [ffmpeg, "-hide_banner", "-filters"], capture_output=True, text=True, errors="replace"
         )
@@ -1758,10 +1467,12 @@ def command_doctor(args) -> int:
         print("            structural roles missing: " + ", ".join(absent))
         ok = False
 
-    fonts = sorted(Path("C:/Windows/Fonts").glob("*.ttf")) if Path("C:/Windows/Fonts").is_dir() else []
-    print(f"Fonts       {len(fonts)} ttf files found")
-    if not fonts:
-        print("            no TrueType fonts; captions will fall back to the default")
+    report = visual_ops.doctor_report()
+    print(f"Node        {report['node'] or 'MISSING   install Node 20 or newer'}")
+    print(f"Browser     {report['browser'] or 'MISSING   install Edge or Chrome'}")
+    print(f"three.js    {'vendored' if report['three'] else 'MISSING   assets are incomplete'}")
+    if not (report["node"] and report["browser"] and report["three"] and report["driver"]):
+        print("            scenes cannot render without these")
         ok = False
 
     print("")
@@ -1834,6 +1545,13 @@ def build_parser() -> argparse.ArgumentParser:
     render.add_argument("--force", action="store_true")
     render.set_defaults(func=command_render)
 
+    stills = subparsers.add_parser("stills", help="Render one PNG per beat for inspection")
+    stills.add_argument("project")
+    stills.add_argument("--beats", type=int, help="only the first N beats")
+    stills.add_argument("--width", type=int, default=1920)
+    stills.add_argument("--height", type=int, default=1080)
+    stills.set_defaults(func=command_stills)
+
     qc = subparsers.add_parser("qc", help="Extract frames and measure the rendered file")
     qc.add_argument("project")
     qc.add_argument("--file", default="final.mp4")
@@ -1858,7 +1576,7 @@ def main() -> int:
     except KeyboardInterrupt:
         print("CANCELLED: interrupted; completed intermediates were kept")
         return 130
-    except (PipelineError, audio_ops.AudioError, OSError, ValueError) as exc:
+    except (PipelineError, audio_ops.AudioError, visual_ops.SceneError, OSError, ValueError) as exc:
         print(f"ERROR: {exc}")
         return 1
 

@@ -17,20 +17,26 @@ the short case story, and the twist at the end.
 1. Asks if you have an idea or want one made, and what genre you want.
 2. Gives you three title and opening hook options.
 3. Writes the full script, ten to fourteen minutes, with five to seven rules.
-4. Builds a beat sheet with narration, captions, camera moves and art direction.
-5. Writes image prompts that keep the same character and the same look across every shot.
+4. Builds a beat sheet with narration, captions, camera moves and a scene block for each shot.
+5. Draws every frame in code with three.js — rooms, the character, the lighting and the
+   captions. **No images are generated**, there are no image prompts and no image tool is
+   needed, so a hundred shots cost nothing but CPU time.
 6. Takes your voiceover, from a recording or from ElevenLabs, and repairs it.
 7. Places sound effects by role, so the right hit lands on the right beat.
 8. Renders the video, checks the audio levels and the frames, and gives you the files.
 
 ## What you need
 
-You need three things on your computer.
+You need four things on your computer.
 
 Python 3.10 or newer. It must have Pillow and numpy installed.
 
 FFmpeg. If it is not installed, the script will try to use the copy that comes with the
 `imageio-ffmpeg` package.
+
+Node.js 20 or newer, plus Microsoft Edge or Google Chrome. The scene renderer runs three.js
+in a headless browser. three.js itself is bundled in `scripts/scene/vendor/`, so there is no
+npm install and nothing is downloaded at render time.
 
 A terminal. On Windows use PowerShell or Git Bash.
 
@@ -62,8 +68,9 @@ python scripts/video_pipeline.py doctor
 ```
 
 It prints your Python version, the Pillow and numpy versions, which FFmpeg it found, whether
-the required filters are there, how many sounds are installed, and how many fonts it can
-see. If anything is wrong it tells you what to fix. The last line should say `READY`.
+the required filters are there, how many sounds are installed, and whether Node, the browser
+and the bundled three.js are available. If anything is wrong it tells you what to fix. The
+last line should say `READY`.
 
 Step 4. Install the skill so your assistant can find it. If you use WorkBuddy or Qoder, link
 the folder into the skills directory.
@@ -103,7 +110,8 @@ Make a new project.
 <python> scripts/video_pipeline.py init "<project>" --title "If Your Hall Light Ever Turns On by Itself... DON'T LOOK UP" --style warm-flat
 ```
 
-That creates the project file, the style lock, the palette and the folders.
+That creates the project file, the scene guide (every location, shot, pose and expression),
+the palette and the folders. There is no style lock to paste anywhere.
 
 Import your voiceover. You can point it at a folder with one audio file per beat, named by
 the beat id, or at one single file for the whole episode.
@@ -126,7 +134,17 @@ Place the sound effects.
 
 The first line shows you the plan. The second one writes it.
 
-Check the project before you spend time rendering.
+Look at the pictures before you spend time rendering.
+
+```
+<python> scripts/video_pipeline.py stills "<project>" --beats 10
+```
+
+That writes one PNG per beat into `render/stills/`. Check that the pale character is visible
+against the dark room, the room is lit, and the rule cards clear the head. Change the beat's
+`scene` block and run it again — stills are cheap.
+
+Then check the project and render a short preview.
 
 ```
 <python> scripts/video_pipeline.py validate "<project>" --assets
@@ -150,18 +168,27 @@ The render writes `final.mp4`, `captions.srt` and `chapters.txt` into the projec
 
 | Command | What it does |
 |---|---|
-| `doctor` | Checks Python, Pillow, numpy, FFmpeg, fonts and the sound library |
-| `init` | Creates a project, the style lock and the folders |
+| `doctor` | Checks Python, Pillow, numpy, FFmpeg, Node, the browser, three.js and the sound library |
+| `init` | Creates a project, the scene guide, the palette and the folders |
 | `audio` | Imports and repairs one audio file per beat |
 | `align` | Splits one long voiceover into beats |
 | `narrate` | Optional. Makes a scratch voice with text to speech |
-| `validate` | Checks the project file and the assets |
-| `timeline` | Prints the beat by beat timing |
+| `validate` | Checks the project file, the scene blocks and the assets |
+| `timeline` | Prints the beat by beat timing with place and shot |
 | `sfx` | Scans the sound library and places effects |
-| `render` | Renders the beats, joins them, mixes the audio |
+| `stills` | Renders one PNG per beat so you can inspect the scene |
+| `render` | Draws the scenes, joins the beats, mixes the audio |
 | `qc` | Extracts frames, measures loudness, finds dead air |
 
-There is a second script for sounds.
+There is a second script for the scenes.
+
+| Command | What it does |
+|---|---|
+| `visual_ops.py doctor` | Checks Node, the browser, three.js and the driver |
+| `visual_ops.py places` | Lists locations, shots, moves, poses, expressions and items |
+| `visual_ops.py still` | Renders one PNG from a standalone scene JSON file |
+
+And one for sounds.
 
 | Command | What it does |
 |---|---|
@@ -208,15 +235,21 @@ create-rule-horror-video/
   references/
     format-dna.md          what the reference videos actually do
     story-engine.md        premises, hooks, rule logic, the quality rubric
-    visual-system.md       how the character is built, palettes, prompt blocks
+    visual-system.md       scene blocks, procedural geometry, palettes, framing
     audio-playbook.md      voice recording, ElevenLabs, repair, transitions
     sfx-library.md         the sound roles, what is installed, what is missing
     production.md          the project file format and the full command reference
   scripts/
     video_pipeline.py      the main tool
+    visual_ops.py          scene specs, the browser driver, clip and still rendering
     audio_ops.py           audio analysis and repair
     sfx_ops.py             the sound importer and auditor
     tts_sapi.ps1           optional offline voice for Windows
+    scene/
+      driver.mjs           headless browser, local server, H.264 stream collector
+      index.html           the page that loads the runtime
+      vendor/              bundled three.js, no install needed
+      src/                 locations, character, camera, overlays, film finish
   assets/
     sfx-catalog.json       the list of sound roles
     sfx/                   the prepared sounds, plus library.json and licenses.txt
@@ -226,44 +259,82 @@ Each project you make looks like this.
 
 ```
 my-episode/
-  project.json             every beat, every setting
-  style-lock.txt           paste this into every image generation
+  project.json             every beat, every scene block, every setting
+  scene-guide.txt          every location, shot, move, pose and expression
   palette.json             the colours for this episode
-  assets/images/           the plates
   assets/audio/            one file per beat, after repair
   assets/music/            the score and the room tone
   assets/sfx/              optional, beats the shared library for that role
-  render/                  intermediate files
+  render/
+    stills/                inspection PNGs
+    clips/                 one MP4 per beat, drawn by three.js
+    streams/               raw H.264 or MJPEG from the browser
+    beats/                 beat clips married to their audio
+    qc/                    extracted frames
   final.mp4                the finished video
   captions.srt
   chapters.txt
 ```
 
-## Making the images
+## How the pictures are made
 
-The skill writes the prompts, it does not generate the pictures for you unless your assistant
-has an image tool connected. Every project gets a `style-lock.txt`. Paste it at the start of
-every image request, then add the scene description. That is what keeps the character looking
-like the same person in shot one and shot ninety.
+Nothing is generated as an image. Each beat carries a `scene` block like this:
 
-The look is flat vector illustration with a designed character, layered backgrounds and one
-warm light source. Not stick figures. The full construction rules are in
-`references/visual-system.md`.
+```json
+"scene": {
+  "place": "hallway",
+  "seed": 7,
+  "camera": { "shot": "medium", "move": "push", "amount": 0.24 },
+  "figure": { "pose": "stand", "z": -3.2, "expression": "absent" },
+  "light": { "flicker": 0.08 },
+  "atmosphere": { "fog": 0.035 }
+}
+```
+
+A headless browser builds that room out of three.js geometry, places a pale-skinned figure
+with a saturated garment, lights it with one practical plus a fill and a rim, and draws the
+grade, grain, vignette, HUD, captions and rule cards on a 2D canvas. WebCodecs encodes the
+frames to H.264 and the Node driver streams them to disk. FFmpeg then marries each clip to
+its narration.
+
+Because it is all code, the character cannot drift between shot one and shot ninety, a new
+shot costs no credits or tokens, and any defect is a value you can fix. Fourteen locations,
+four shots, seven camera moves, ten poses and six expressions are built in. The full field
+reference is in `references/visual-system.md`, and `visual_ops.py places` prints the live
+list. Run `stills` to look at the result before rendering the whole episode.
+
+The character's skin is deliberately pale so it reads against black rooms; the clothes come
+from the chosen style palette. The face is two eyes and a mouth, no detail — a face that
+stops reacting does the horror work.
+
+To add a new room or prop, add geometry to `scripts/scene/src/builders.js`. Do not add an
+image model.
 
 ## Things that will trip you up
 
-Renders take time. On a four core machine a twelve minute episode is roughly twenty five to
-thirty five minutes. Always render a preview of ten beats first.
+Renders take time. Every frame is drawn by WebGL, so a twelve minute episode at 1080p30 is
+roughly twenty to thirty five minutes on a four core machine, plus a few seconds once per
+batch to start the browser. Run `stills` and a ten beat preview first; both are cheap and
+catch almost everything.
 
 The `python` on your PATH might not have the packages. If you get a missing module error, use
 the full path to the Python that does.
+
+Node or the browser may not be where the script looks. Set `RULE_HORROR_NODE` or
+`RULE_HORROR_BROWSER` to an explicit path. `visual_ops.py doctor` prints what it found.
 
 Text to speech is optional and sounds like text to speech. The intended path is your own
 recording or an ElevenLabs export. The skill will not install a text to speech package
 without asking.
 
-Beat caching keys on the project file, not on the contents of the sound library. If you
-replace a sound file, render with `--force`.
+Beat caching is a hash of the scene block, the text, the duration, the frame size, the fps,
+the style and the relevant settings. Change any of those and only that beat re-renders. The
+hash does not include the sound library, so if you replace an effect file, render with
+`--force`.
+
+The first render of a batch starts one headless browser and reuses it for every beat. If a
+run is killed hard, the driver's shutdown handler takes the browser tree down with it; if
+you kill it from outside, check Task Manager for leftover `msedge` or `chrome` processes.
 
 Nothing here promises views. The structure is built to hold attention, but the story and the
 art still decide whether it works.

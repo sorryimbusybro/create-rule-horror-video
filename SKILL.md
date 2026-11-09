@@ -1,6 +1,6 @@
 ---
 name: create-rule-horror-video
-description: Produce complete long-form rule-based horror videos end to end — viral title hooks, retention-engineered scripts, illustrated characters and locations, optional or user-supplied voiceover with pause repair, captions, music, transitions, and a rendered MP4. Use for "If X ever happens... DON'T Y" videos, analog horror, supernatural survival-rule stories, Lullorin-style channels, or any narrated horror episode built from numbered rules.
+description: Produce complete long-form rule-based horror videos end to end — viral title hooks, retention-engineered scripts, procedurally drawn characters and locations rendered with three.js (no image generation), optional or user-supplied voiceover with pause repair, captions, music, transitions, and a rendered MP4. Use for "If X ever happens... DON'T Y" videos, analog horror, supernatural survival-rule stories, Lullorin-style channels, or any narrated horror episode built from numbered rules.
 ---
 
 # Create Rule Horror Video
@@ -9,15 +9,22 @@ description: Produce complete long-form rule-based horror videos end to end — 
 
 Deliver a finished, original episode — not an outline, not a prompt pack. Reproduce the
 retention mechanics of the reference format while keeping every story, character, line and
-plate original.
+scene original.
 
-Two hard rules:
+Three hard rules:
 
-1. **The voice belongs to the user.** Uploaded narration (recording or ElevenLabs) is the
-   first-class path. Text-to-speech is an opt-in fallback, never a silent default.
-2. **Characters are illustrated, never stick figures.** Every plate is a composed scene
-   with a designed character, layered background, one light source and atmosphere. See
+1. **Zero image generation.** Every frame is drawn by code. Rooms, furniture, the character,
+   the light, the grain and the type are built with three.js geometry, canvas drawing and
+   shaders in a headless browser. Never call an image model, never generate a plate, never
+   ask for an image prompt, never write a "style lock" to paste into a generator. A scene
+   costs only CPU time, so iterate freely. See
    [references/visual-system.md](references/visual-system.md).
+2. **The voice belongs to the user.** Uploaded narration (recording or ElevenLabs) is the
+   first-class path. Text-to-speech is an opt-in fallback, never a silent default.
+3. **Characters are modelled, never stick figures.** Each `scene` block describes a composed
+   3D room with a designed figure, layered geometry, one practical light source and
+   atmosphere. The figure has pale skin so it reads against a black environment, a saturated
+   garment, tapered filled limbs and a small face vocabulary.
 
 And one on sound: **effects are placed, not sprinkled.** A prepared library ships with the
 skill and every file carries a role name, a trimmed head, a matched level and a cooldown, so
@@ -31,7 +38,7 @@ Never promise views or virality. Optimise for curiosity, clarity and watch time.
 | Before | Read |
 |---|---|
 | Ideation and hooks | [references/format-dna.md](references/format-dna.md), [references/story-engine.md](references/story-engine.md) |
-| Any image work | [references/visual-system.md](references/visual-system.md) |
+| Any visual / scene work | [references/visual-system.md](references/visual-system.md) |
 | Any audio work | [references/audio-playbook.md](references/audio-playbook.md) |
 | Sound design | [references/sfx-library.md](references/sfx-library.md) |
 | Building or rendering | [references/production.md](references/production.md) |
@@ -44,8 +51,9 @@ Never promise views or virality. Optimise for curiosity, clarity and watch time.
 python "<skill>/scripts/video_pipeline.py" doctor
 ```
 
-The last line must say `READY`. If it reports a missing module, filter or structural sound
-role, fix that before writing a script the user cannot render.
+The last line must say `READY`. Besides Python, numpy, Pillow, FFmpeg and the sound library,
+`doctor` now checks for **Node 20+, Edge or Chrome, and the vendored three.js build**. Fix a
+missing line before writing a script the user cannot render.
 
 ### 1. Establish direction
 
@@ -96,41 +104,64 @@ Ask: **"Do you have a voiceover (recording or ElevenLabs), or should I generate 
 If they supply one continuous file instead of per-beat files, use `align` rather than
 guessing boundaries.
 
-### 5. Plan visuals before generating
+### 5. Plan the scene language
 
 Pick one style preset (`warm-flat` default, or `noir-line`) and keep it for the episode.
-`init` writes `style-lock.txt` and `palette.json` — paste the lock into every request.
+`init` writes `scene-guide.txt` (the full vocabulary) and `palette.json`. There is no style
+lock, no prompt and no reference sheet — consistency comes from using the same `place`,
+the same `seed` family and the same `garment` colour across the episode.
 
-Plan 15–30 unique plates for a 10–14 minute episode:
+Plan locations the way you would plan a shoot:
 
-- one establishing plate per location
-- one medium per recurring action
-- object inserts: phone, lock, key, photograph, door gap, bedding
-- two or three entity variations
-- one plate for the final inversion
+- one establishing `wide` per location, then `medium` for reactions and `close` for dread
+- `insert` / `object` beats for the phone, key, lock, photo or paper
+- `void` with an `overlay` for full-screen rule cards
+- an `entity` block (a tall dark silhouette) for two or three appearances only
+- one changed condition for the final inversion — light off, a door gap, a new pose
 
-Reuse plates deliberately. Change one variable per return — light, framing, a moved
-object, a new shadow. The renderer adds motion, grade, grain and vignette, so a reused
-plate never looks identical.
+Change one variable per return to a location: `camera.shot`, `camera.move`, `light.flicker`,
+`atmosphere.fog`, `figure.pose` or `figure.expression`. Because the scene is code, a
+"reused" room is rebuilt each beat and can be re-lit, re-framed and re-posed at no cost.
 
-### 6. Produce the assets
+### 6. Author the scene blocks
 
-**Characters.** Generate one character sheet first (four views, three expressions), inspect
-it, then use it as an image reference for every scene. Reject any sheet with stick limbs,
-malformed hands, a drifting garment colour, or the wrong head-to-body ratio.
+Every beat carries a `scene` object. Nothing is generated as an image; the renderer builds
+the room from geometry at render time. Example:
 
-**Plates.** Generate at 16:9, text-free, with the lower 22% dark and uncluttered. Inspect
-every unique image at full size. Regenerate rather than "fix it in the edit".
+```json
+"scene": {
+  "place": "hallway",
+  "seed": 7,
+  "camera": { "shot": "medium", "move": "push", "amount": 0.24, "handheld": 0.2 },
+  "figure": { "pose": "stand", "x": 0, "z": -3.2, "facing": 0, "expression": "absent" },
+  "light": { "flicker": 0.08 },
+  "atmosphere": { "fog": 0.035 }
+}
+```
 
-**Cost.** Image generation consumes credits. Tell the user before generating a large batch,
-and state the approximate count. Never generate 30 plates before the style is approved —
-lock the look on one sheet and one scene first.
+Full vocabulary: `visual_ops.py places`, or `scene-guide.txt` in the project. Places:
+`hallway bedroom kitchen living bathroom basement attic stairwell forest road field void
+object`. Shots: `wide medium close insert`. Moves: `static push pull drift-left
+drift-right rise crane`. Poses: `stand sit kneel lie walk crouch reach point head-tilt
+back-turn`. Expressions: `neutral uneasy wrong afraid absent hidden`.
 
-**Watermarks.** If the generator stamps a corner mark, set
-`settings.clean_edges: { "bottom": 0.075, "right": 0.02 }` and re-render.
+**Inspect with stills, not guesses.** Before committing to a full render:
 
-**Branding.** Create an original channel mark and episode label. Never place another
-creator's name or logo in the output.
+```bash
+python "<skill>/scripts/video_pipeline.py" stills "<project>" --beats 10
+```
+
+Open the PNGs in `render/stills/`. Check that the pale figure is visible against the dark
+room, the room is lit and layered, the camera is inside the walls, captions and rule cards
+clear the head, and the frame is not black. Fix the `scene` block and re-run — the stills
+are cheap.
+
+**Cost.** Rendering is CPU-bound local work. There are no credits, no API calls and no
+image tokens. Be as iterative as you like, but preview a handful of beats before rendering
+a 12-minute episode.
+
+**Branding.** Set `settings.brand` and `settings.episode` for the small HUD. Never place
+another creator's name or logo in the output.
 
 **Music.** Use licensed or generated music and note the licence. Keep it under speech.
 
@@ -142,7 +173,7 @@ python "<skill>/scripts/video_pipeline.py" init "<project>" --title "<approved t
 
 Each beat is one caption and one narration unit, usually 8–22 words, 2–8 seconds. A
 10–14 minute episode needs roughly 75–130 beats. Every beat gets an ID, section,
-narration, caption, image, camera move, and — once audio exists — an audio path.
+narration, caption, **scene**, and — once audio exists — an audio path.
 
 Optional beat fields that lift the edit:
 
@@ -201,8 +232,10 @@ python "<skill>/scripts/video_pipeline.py" validate "<project>" --assets
 python "<skill>/scripts/video_pipeline.py" render "<project>" --preview 10
 ```
 
-Fix every error. Then inspect frames from the preview: caption fit, HUD position, character
-continuity, grade, black levels, and whether the overlay collides with the subject.
+Fix every error. `validate` rejects an unknown `place`, camera move, pose or expression, so
+typos are caught before a render. Then inspect frames from the preview: caption fit, HUD
+position, character continuity, grade, black levels, and whether the overlay collides with
+the subject.
 
 ### 11. Final render and QC
 
@@ -224,7 +257,7 @@ Deliver:
 - A description that preserves the mystery
 - Three thumbnail directions: one familiar object, one impossible detail, ≤3 words
 - Chapter timestamps from `chapters.txt`
-- `script.md`, `captions.srt`, `project.json`, `style-lock.txt`
+- `script.md`, `captions.srt`, `project.json`, `scene-guide.txt`, `palette.json`
 - Music and effect licence note — `assets/sfx/licenses.txt` in the library lists every source
 - Any unresolved limitation
 
@@ -239,7 +272,8 @@ Revise until every answer is yes:
 - Does every rule reveal new information rather than restate the threat?
 - Are three payoff clues planted before the reveal?
 - Is the voice the user's own, or clearly disclosed as synthetic?
-- Does every plate have a designed character in a layered location?
+- Was every frame drawn by code — no generated images, no plates, no style lock?
+- Does every beat's scene have a readable pale figure in a layered, lit location?
 - Are captions readable at phone size and clear of the threat?
 - Do section transitions land on a visual change, not mid-sentence?
 - Is the audio free of clicks, dead air, and clipped words?
@@ -249,11 +283,13 @@ Revise until every answer is yes:
 
 - `references/format-dna.md` — measured patterns from the reference set
 - `references/story-engine.md` — premises, hooks, rule logic, retention spine, rubric
-- `references/visual-system.md` — character construction, palettes, prompt blocks, defects
+- `references/visual-system.md` — scene blocks, procedural geometry, palettes, framing, defects
 - `references/audio-playbook.md` — voice routing, recording and ElevenLabs briefs, repair, transitions, loudness
 - `references/sfx-library.md` — effect roles, installed files, importer, auto-placement, mixing levels
 - `references/production.md` — project schema and full CLI reference
-- `scripts/video_pipeline.py` — init, audio import, optional TTS, align, validate, timeline, sfx, render, qc
+- `scripts/video_pipeline.py` — init, audio import, optional TTS, align, validate, timeline, sfx, stills, render, qc, doctor
+- `scripts/visual_ops.py` — scene spec normalisation, browser driver, clip/still rendering, `doctor` and `places`
+- `scripts/scene/` — the three.js runtime: `driver.mjs` (headless browser + HTTP stream), `src/builders.js` (14 locations), `src/figure.js` (character), `src/runtime.js` (camera and frame), `src/overlay.js`, `src/fx.js`, `vendor/three.module.min.js`
 - `scripts/audio_ops.py` — silence detection, pause capping, levelling, room tone
 - `scripts/sfx_ops.py` — effect importer: trim, level, convert, rename, manifest, audit
 - `assets/sfx-catalog.json` — the role catalog copied into every project

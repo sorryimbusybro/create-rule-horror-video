@@ -38,38 +38,57 @@ The public channel listing showed nine videos built around the same title engine
 
 ## Visual grammar
 
-The bullets below describe the reference set, which is monochrome line art. The skill also
-ships a second, illustrated preset (`warm-flat`) for channels that want a designed cartoon
-character in a layered, warmly lit world. Both are specified in
-[visual-system.md](visual-system.md); pick one per series and never mix them.
+The bullets below describe the reference set, which is monochrome line art. These are
+structural observations, **not** prompts. The skill draws its own frames in code with
+three.js; no image model is involved. Two style presets ship with it (`warm-flat` and
+`noir-line`), specified in [visual-system.md](visual-system.md); pick one per series and
+never mix them.
 
-Reference-set grammar:
+Reference-set grammar, translated into scene-block terms:
 
-- Pure or near-black background with abundant negative space.
-- Thin ivory-white outlines, flat charcoal fills, simple rounded characters, dot eyes, and restrained facial expressions.
-- One muted amber practical light, such as a bedside lamp or the gap under a door.
-- Red reserved for the highest-stakes warning or final reveal.
-- Wide master shots establish a room; medium shots show reactions; close-ups isolate phones, locks, tags, messages, shadows, or bedding.
-- Full-screen rule cards and sparse typographic punches reset attention.
-- A tiny original series label at top left and timecode/recording mark at top right create a surveillance-document feel.
-- Bottom-center uppercase captions, usually one or two short lines, remain inside a dark safe area.
-- Movement is economical: slow push-ins, lateral drift, blinking lights, a changed silhouette, a door opening, or a shadow appearing. The threat is often conveyed by one changed detail rather than constant animation.
+- Pure or near-black background with abundant negative space → `noir-line` palette, `void` for full-screen cards, generous fog.
+- Thin ivory-white outlines, flat charcoal fills, simple rounded characters, dot eyes, restrained faces → a pale-skinned figure on a dark wall, `expression: neutral | uneasy | absent`.
+- One muted amber practical light, such as a bedside lamp or the gap under a door → every location owns one practical; animate it with `light.flicker`.
+- Red reserved for the highest-stakes warning or final reveal → `accent: red` at most twice an episode.
+- Wide master shots establish a room, medium shots show reactions, close-ups isolate objects → `camera.shot: wide | medium | close | insert`, plus `place: object` with an `item`.
+- Full-screen rule cards and sparse typographic punches reset attention → `place: void` with `overlay` and `overlay_style: card`.
+- A tiny original series label and episode mark create a surveillance-document feel → `settings.brand` and `settings.episode`, drawn by the type layer.
+- Bottom-center uppercase captions, one or two short lines, inside a dark safe area → `caption` with `settings.caption.band`.
+- Movement is economical: slow push-ins, lateral drift, blinking lights, a changed silhouette, a door opening, a shadow appearing → `camera.move`, `camera.handheld`, `light.flicker`, `light.pulse`, `entity`. The threat is one changed detail rather than constant animation.
 
-## Original visual prompt template
+## Translating a beat into a scene block
 
-Use this as a starting point, not a request to reproduce a specific reference frame:
+Write a `scene` object, not a sentence for a generator:
 
-> Original minimalist 2D line-animation frame, 16:9 composition, matte near-black background, thin ivory-white contour lines, flat charcoal-gray fills, a simple rounded faceless character with dot eyes and subtle worried brows, [specific ordinary location and action], one practical light casting a muted amber wedge, sparse domestic geometry, eerie negative space, one clearly staged impossible detail, restrained analog-horror mood, clean silhouettes, subtle texture, leave the lower 22 percent dark and uncluttered for captions, no words, no letters, no numbers, no logo, no watermark, no photorealism, no gore.
+```json
+{
+  "place": "hallway",
+  "seed": 7,
+  "camera": { "shot": "wide", "move": "push", "amount": 0.18 },
+  "figure": { "pose": "back-turn", "z": -3.2, "expression": "absent" },
+  "light": { "flicker": 0.06 },
+  "atmosphere": { "fog": 0.04 }
+}
+```
 
-For close-ups, replace the character description with the relevant object. For the final card, create typography programmatically instead of asking an image model to render words.
+For an object insert, use `place: "object"`, `item: "phone"`, `camera.shot: "insert"`, and
+omit `figure`. For a full-screen rule card, use `place: "void"`, put the words in `overlay`,
+and set `overlay_style: "card"`. All text — captions, rule numbers, the HUD — is drawn by the
+renderer's vector type layer; geometry never contains letters.
 
 ## Continuity rules
 
-- Establish a limited palette and line weight before generating plates.
-- Keep room geometry, door hinge side, window position, bed orientation, and character proportions consistent.
-- Generate a neutral character reference and reuse it for subsequent poses.
-- Change one meaningful variable per escalation: warmth glow, shadow density, eye direction, phone face, door gap, or a second silhouette.
-- Keep generated text out of plates. Add captions, messages, rule numbers, and timecodes in the renderer or vector layer.
+- Fix the palette (`style`) and the figure's `garment` colour before writing beats.
+- Room geometry is code: one `place` is one builder. Reuse the same `place` and a seed
+  family for a location and its geometry, door positions and props stay identical.
+- The same `figure.js` code builds the character in every beat, so proportions cannot drift.
+  Keep `skin`, `garment`, `trousers` and `height` constant.
+- Change one meaningful variable per escalation: `light.flicker`, `atmosphere.fog`,
+  `figure.expression`, `figure.pose`, `camera.shot`, or add an `entity`.
+- Never bake words into geometry. Captions, messages, rule numbers, timecodes and the HUD
+  are drawn by `overlay.js` on the 2D canvas.
+- Inspect with `video_pipeline.py stills` before a full render; a bad spec value is a bug to
+  fix, not a generation to retry.
 - Do not copy the reference creator's name, exact title card, character design details, or signature final-frame layout.
 
 ## Audio direction
